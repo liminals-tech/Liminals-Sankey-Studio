@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Sankey Studio"
+description = "A browser-only visualization tool that turns spreadsheet data into polished Sankey diagrams for reports, articles, presentations, tutorials, and social content."
+version = "1.0.0"
+id = "artifacts/sankey-studio"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23598
+
+[services.development]
+run = "pnpm --filter @workspace/sankey-studio run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sankey-studio", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sankey-studio/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23598"
+BASE_PATH = "/"

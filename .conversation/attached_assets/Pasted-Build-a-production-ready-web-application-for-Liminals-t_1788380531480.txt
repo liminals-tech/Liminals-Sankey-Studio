@@ -1,0 +1,966 @@
+Build a production-ready web application for Liminals.tech that allows users to turn ordinary spreadsheet data into professional Sankey diagrams with minimal setup.
+
+The product must be useful both as:
+
+1. a standalone public visualization tool;
+2. a tool for content creators, trainers and business professionals who need high-quality Sankey diagrams for articles, Excel tutorials, presentations, courses and videos.
+
+The core promise is:
+
+Turn spreadsheet data into a Sankey diagram in seconds.
+
+Do NOT build a generic diagramming platform.
+
+Do NOT add AI.
+
+Do NOT add authentication, databases, Supabase, payments, collaboration or cloud storage in this MVP.
+
+All uploaded data must remain in the browser.
+
+The architecture should remain suitable for a future animated Sankey mode and GIF/MP4 export, but do NOT implement video export yet.
+
+---
+
+TECH STACK
+
+Use:
+
+- React
+- TypeScript
+- Vite
+- D3 Sankey or another mature lightweight Sankey implementation
+- SheetJS/xlsx for Excel file parsing where appropriate
+
+Keep dependencies minimal.
+
+The application must be deployable as a static frontend on Netlify.
+
+Do not create an Express server or any backend.
+
+---
+
+CORE USER EXPERIENCE
+
+The application itself is the homepage.
+
+Do not create a marketing landing page before the tool.
+
+When the user opens the application:
+
+1. immediately show a polished example Sankey;
+2. provide a clear way to upload or paste data;
+3. allow mapping of columns;
+4. update the visualization immediately;
+5. allow visual customization;
+6. allow high-quality export.
+
+The complete workflow should feel:
+
+Upload → Map → Visualize → Customize → Export
+
+Avoid onboarding screens and unnecessary steps.
+
+---
+
+DATA INPUT
+
+Support:
+
+- XLSX
+- XLS
+- CSV
+- JSON
+- pasted tabular data
+
+Provide:
+
+- drag-and-drop upload;
+- file picker;
+- paste-data area.
+
+All parsing must happen locally.
+
+Display prominently near the importer:
+
+Your data stays in your browser.
+
+Never send cell contents, column names or uploaded files to external APIs.
+
+---
+
+INPUT MODE 1 — SOURCE / TARGET / VALUE
+
+Support traditional Sankey data:
+
+Source | Target | Value
+
+Example:
+
+Revenue | COGS | 2000000
+Revenue | Gross Profit | 3000000
+Gross Profit | Personnel | 1200000
+Gross Profit | Marketing | 500000
+Gross Profit | IT | 300000
+Gross Profit | Operations | 200000
+Gross Profit | EBITDA | 800000
+
+Allow the user to map:
+
+- Source
+- Target
+- Value
+
+Automatically suggest mappings based on common column names.
+
+Aggregate duplicate Source/Target combinations.
+
+---
+
+INPUT MODE 2 — MULTI-LEVEL SPREADSHEET
+
+This is a key differentiating feature.
+
+Users should NOT need to restructure normal business tables manually.
+
+Example input:
+
+Business Unit | Supplier | Category | Subcategory | Spend
+
+Allow users to define:
+
+Level 1
+→ Level 2
+→ Level 3
+→ optional additional levels
+
+and select:
+
+Value
+
+Automatically convert hierarchical rows into the links required by the Sankey renderer.
+
+Example:
+
+Finance | Microsoft | Software | Productivity | 50000
+
+becomes conceptually:
+
+Finance → Microsoft
+Microsoft → Software
+Software → Productivity
+
+weighted by the selected value.
+
+Aggregate duplicate flows automatically.
+
+Make the hierarchy builder easy to understand.
+
+Allow the user to reorder selected hierarchy levels.
+
+---
+
+SAMPLE BUSINESS TEMPLATES
+
+The application should include built-in example datasets.
+
+Do NOT label them only with generic categories such as Finance, HR or Sales.
+
+Use business questions.
+
+Include these eight example templates:
+
+1. Where does the money go?
+
+Show:
+
+Revenue
+→ COGS
+→ Gross Profit
+→ Personnel
+→ Marketing
+→ IT
+→ Operations
+→ EBITDA
+
+Subtitle:
+
+Budget, costs and margin flow
+
+---
+
+2. Where does the time go?
+
+Show:
+
+Team Capacity
+→ Work Hours
+→ Meetings
+→ Deep Work
+→ Customer Support
+→ Admin
+
+Meetings can split into:
+
+Status Meetings
+Project Meetings
+
+Deep Work can split into:
+
+Analysis
+Execution
+
+Subtitle:
+
+Meetings, focus work and admin flow
+
+---
+
+3. Where does the work get stuck?
+
+Show:
+
+Requests
+→ Initial Review
+
+then:
+
+Ready
+Clarification
+Rejected
+
+Ready
+→ Execution
+→ Done / Rework
+
+Clarification
+→ Back to requester
+→ Resolved / Still waiting
+
+Subtitle:
+
+Requests, handoffs and bottlenecks
+
+---
+
+4. Where does revenue disappear?
+
+Show:
+
+Pipeline
+→ Won
+→ Lost
+→ Delayed
+
+Lost should split into examples such as:
+
+Price
+Features
+No Decision
+Competitor
+
+Delayed should split into:
+
+Budget freeze
+Legal review
+Timing
+
+Subtitle:
+
+Pipeline losses and delay reasons
+
+---
+
+5. Where does rework happen?
+
+Show:
+
+Orders
+→ Production
+→ Quality Check
+
+Quality Check
+→ Approved
+→ Rework
+→ Scrap
+
+Rework
+→ Second Check
+→ Recovered / Rejected
+
+Subtitle:
+
+Process loops, scrap and quality loss
+
+---
+
+6. Where does the data go?
+
+Show an intentionally realistic business data flow:
+
+Core Systems
+→ ERP
+→ CRM
+→ SharePoint
+→ Excel Master
+
+then:
+
+Excel Master
+→ Power Query
+→ Report Files
+→ Email Attachments
+→ Dashboard
+
+Report Files can continue to:
+
+Management Report
+Ad hoc copies
+
+Subtitle:
+
+Systems, files and manual reporting flow
+
+This template is especially important because the product should also be useful for Excel, Microsoft 365 and Power Query educational content.
+
+---
+
+7. What is AI changing?
+
+Show:
+
+Workload
+→ Research
+→ Analysis
+→ Reporting
+→ Formatting
+
+then redistribute those activities into:
+
+Human-only
+AI-assisted
+Automated
+
+Subtitle:
+
+Manual work shifting to automation and AI
+
+---
+
+8. Who does the organization depend on?
+
+Show knowledge areas such as:
+
+Pricing Rules
+ERP Administration
+Customer Reporting
+Planning
+Supplier Data
+
+flowing through:
+
+Expert A
+Expert B
+Expert C
+
+and then toward:
+
+Sales Ops
+Finance
+Management Reports
+Procurement
+Planning Cycle
+
+Make one expert visibly represent concentrated organizational dependency.
+
+Subtitle:
+
+Knowledge concentration and key-person risk
+
+---
+
+TEMPLATE EXPERIENCE
+
+Add an entry point such as:
+
+Try an example
+
+Display the eight examples as a compact template gallery.
+
+Each template should have:
+
+- question/title;
+- short description;
+- small visual preview if practical.
+
+Selecting one should immediately load the complete interactive Sankey into the editor.
+
+Templates are examples, not locked formats.
+
+Once loaded, users can modify all data and settings.
+
+---
+
+SANKEY VISUALIZATION
+
+The Sankey must be the visual centerpiece.
+
+Requirements:
+
+- responsive layout;
+- proportional flow widths;
+- readable nodes;
+- readable labels;
+- useful hover/tap states;
+- clean default spacing;
+- automatic duplicate aggregation;
+- graceful long-label handling;
+- sensible behavior with many nodes;
+- consistent values throughout the flow;
+- clear highlighting of selected nodes and connected paths.
+
+On tap or click of a node:
+
+highlight:
+
+- upstream links;
+- downstream links;
+- connected nodes.
+
+On tap or click of a link:
+
+show:
+
+Source
+Target
+Value
+
+Do not rely only on hover because the tool must also work on mobile.
+
+---
+
+LAYOUT OPTIONS
+
+Support at least:
+
+- horizontal Sankey: left → right;
+- reversed horizontal Sankey if simple to implement.
+
+Structure the renderer so a future vertical mode could be added, but it is not required for the MVP.
+
+---
+
+NODE POSITIONING
+
+Use automatic layout initially.
+
+If stable and reasonably straightforward, allow users to drag nodes vertically.
+
+Do not let node dragging destabilize the application.
+
+The basic renderer and exports are more important.
+
+If manual movement is implemented:
+
+- retain position during editing;
+- provide Reset layout.
+
+---
+
+VISUAL STYLE
+
+Default output must already be presentation-quality.
+
+Users should not need design skills to obtain a good result.
+
+Avoid rainbow palettes by default.
+
+Provide several restrained palettes suitable for:
+
+- business reporting;
+- editorial articles;
+- presentations;
+- dark background;
+- neutral/minimal visualizations.
+
+Allow:
+
+- custom background;
+- transparent background;
+- node colors;
+- link colors;
+- link opacity;
+- node width;
+- node spacing;
+- typography;
+- font size;
+- title;
+- subtitle.
+
+Keep advanced options grouped separately.
+
+---
+
+LABEL OPTIONS
+
+Allow at least:
+
+- node name;
+- node name + value;
+- value only;
+- hide values;
+- hide labels.
+
+Allow positioning where technically reasonable:
+
+- inside node;
+- outside node.
+
+Long labels must remain readable.
+
+---
+
+NUMBER FORMATTING
+
+Support:
+
+- automatic;
+- integer;
+- decimal;
+- percentage;
+- currency;
+- compact notation.
+
+Currency options:
+
+- €
+- $
+- £
+
+Allow:
+
+- decimal places;
+- thousand separator.
+
+Do not alter underlying numeric values.
+
+---
+
+CONTENT CREATION FEATURES
+
+This product must explicitly support people creating assets for:
+
+- articles;
+- tutorials;
+- presentations;
+- social posts;
+- YouTube videos;
+- course material.
+
+Therefore provide useful canvas/aspect-ratio presets.
+
+Include at least:
+
+- Auto
+- 16:9
+- 4:3
+- 1:1
+- 4:5
+- 9:16
+
+Examples:
+
+16:9 → video / presentation
+4:5 → LinkedIn / social
+1:1 → square visual
+9:16 → vertical video
+
+Changing aspect ratio should change the visualization canvas, not simply crop the finished result.
+
+---
+
+TITLE AND SUBTITLE
+
+Allow users to add:
+
+Title
+
+and
+
+Subtitle
+
+inside the exported visualization.
+
+Provide:
+
+- show/hide title;
+- alignment;
+- basic font sizing.
+
+Do not force Liminals branding into the visualization.
+
+---
+
+EXPORT
+
+Export quality is a major product requirement.
+
+Implement:
+
+PNG
+
+Support:
+
+- current canvas dimensions;
+- 2× high-resolution export;
+- transparent background where appropriate.
+
+The export must contain only the visualization canvas, including title/subtitle when enabled.
+
+Never export editor controls.
+
+---
+
+SVG
+
+Provide clean scalable SVG export.
+
+Text and flows should remain crisp.
+
+The SVG should be useful for:
+
+- presentations;
+- articles;
+- design tools;
+- further editing.
+
+---
+
+FUTURE VIDEO / ANIMATION READINESS
+
+Do NOT implement GIF or MP4 now.
+
+However, design the renderer so that future data can have:
+
+Date | Source | Target | Value
+
+Example:
+
+2024 | Revenue | Personnel | 100
+2025 | Revenue | Personnel | 120
+2026 | Revenue | Personnel | 150
+
+A future version should be able to animate the Sankey between dates.
+
+Therefore separate:
+
+data input
+→ parsing
+→ normalization
+→ Sankey model
+→ layout
+→ rendering
+→ export
+
+Do not tightly couple Sankey calculations to the editor UI.
+
+Avoid architecture choices that would make frame-by-frame rendering difficult later.
+
+---
+
+DATA PREVIEW
+
+After importing data, show a compact table preview.
+
+Show:
+
+- detected columns;
+- number of rows;
+- valid rows;
+- ignored rows;
+- numeric errors.
+
+Do not build a spreadsheet editor.
+
+The purpose is only to help users confirm that the correct data was imported.
+
+---
+
+DATA VALIDATION
+
+Handle gracefully:
+
+- empty input;
+- missing fields;
+- empty Source;
+- empty Target;
+- text in Value;
+- zero values;
+- negative values;
+- duplicate links;
+- circular relationships;
+- self-references;
+- disconnected nodes;
+- very large datasets.
+
+Never display:
+
+NaN
+Infinity
+undefined
+
+Never leave a blank visualization without explaining why.
+
+---
+
+CIRCULAR FLOWS
+
+Traditional Sankey layouts may not support loops cleanly.
+
+Detect circular relationships.
+
+If unsupported by the selected renderer, show a clear message explaining which relationships cause the problem.
+
+Do not silently produce an incorrect diagram.
+
+Design the code so more sophisticated loop support could be added later.
+
+---
+
+UI STRUCTURE
+
+Use a simple professional workspace.
+
+On larger screens:
+
+LEFT PANEL
+
+Data
+Mapping
+Style
+Labels
+Canvas
+Export
+
+RIGHT / MAIN AREA
+
+Large Sankey canvas
+
+On smaller screens:
+
+settings above the visualization.
+
+Avoid excessive cards.
+
+Avoid a dashboard appearance.
+
+The Sankey should dominate the interface.
+
+---
+
+MOBILE
+
+The complete workflow must work from mobile.
+
+Important because users may create and edit projects from phones or tablets.
+
+Requirements:
+
+- touch-friendly controls;
+- minimum practical touch sizes;
+- no page-level horizontal overflow;
+- tap interaction with nodes and links;
+- file upload from mobile;
+- responsive Sankey canvas;
+- export accessible from mobile.
+
+Do not hide essential functionality on mobile.
+
+---
+
+PRIVACY
+
+All processing must remain client-side.
+
+Do not send:
+
+- uploaded files;
+- dataset content;
+- column names;
+- node labels;
+- generated visuals;
+
+to external services.
+
+No backend is required.
+
+---
+
+ACCESSIBILITY
+
+Provide:
+
+- keyboard-accessible controls;
+- visible focus states;
+- adequate text contrast;
+- semantic form labels;
+- usable interactions without hover.
+
+Respect reduced-motion preferences even though this MVP contains minimal animation.
+
+---
+
+CODE ORGANIZATION
+
+Use a modular architecture.
+
+A reasonable structure could be:
+
+src/
+components/
+data/
+templates/
+sankey/
+export/
+styles/
+utils/
+
+Separate concerns for:
+
+- file parsing;
+- clipboard/tabular parsing;
+- validation;
+- mapping;
+- hierarchy conversion;
+- data normalization;
+- Sankey model;
+- layout;
+- renderer;
+- export;
+- template datasets;
+- visual settings.
+
+Do not put the whole application in one large component.
+
+Do not over-engineer abstractions that are not yet useful.
+
+---
+
+FUTURE REUSE
+
+This application may later become part of a broader Liminals.tech visualization toolkit including:
+
+- Animated Bar Charts;
+- Timeline Builder;
+- Power Query visualizations;
+- Data Transformation animations;
+- other data-storytelling tools.
+
+Where reasonable, keep generic functionality such as:
+
+- file import;
+- aspect ratio;
+- visual canvas;
+- title/subtitle rendering;
+- image export;
+
+isolated enough that it could later be reused.
+
+Do NOT refactor or connect any existing Liminals project as part of this task.
+
+This Sankey application must remain an independent project for now.
+
+---
+
+DESIGN DIRECTION
+
+Use a restrained Liminals.tech-style visual language:
+
+- minimal;
+- modern;
+- professional;
+- data-first;
+- clear hierarchy;
+- generous whitespace;
+- subtle borders;
+- strong typography;
+- limited decoration.
+
+Avoid:
+
+- glassmorphism;
+- unnecessary gradients;
+- excessive shadows;
+- oversized cards;
+- decorative dashboards;
+- marketing hero sections;
+- animated background elements.
+
+The visualization should provide the visual impact.
+
+---
+
+MVP BOUNDARIES
+
+Do NOT implement:
+
+- AI;
+- login;
+- Supabase;
+- databases;
+- Stripe;
+- payments;
+- accounts;
+- cloud saves;
+- collaboration;
+- shared URLs;
+- Power BI integration;
+- Excel add-ins;
+- MP4;
+- GIF;
+- animated Sankey;
+- user-generated public galleries.
+
+These are future possibilities.
+
+---
+
+TESTING
+
+Before considering the project complete, verify at minimum:
+
+1. default sample loads correctly;
+2. all eight templates load correctly;
+3. CSV import works;
+4. XLSX import works;
+5. JSON import works;
+6. pasted spreadsheet data works;
+7. Source / Target / Value mapping works;
+8. multi-level hierarchy mapping works;
+9. hierarchy levels can be reordered;
+10. duplicate flows aggregate correctly;
+11. invalid numeric values are handled;
+12. long labels remain usable;
+13. node selection works on desktop;
+14. node selection works by tap on mobile;
+15. 16:9 canvas works;
+16. 1:1 canvas works;
+17. 9:16 canvas works;
+18. PNG export works;
+19. high-resolution PNG works;
+20. transparent PNG works;
+21. SVG export works;
+22. title/subtitle appear correctly in exports;
+23. production build succeeds;
+24. Netlify-compatible static build succeeds.
+
+Fix discovered errors before declaring the project complete.
+
+---
+
+FINAL PRODUCT PRINCIPLE
+
+Optimize the entire application around this workflow:
+
+Spreadsheet → Sankey → publishable visual
+
+The application should make it possible for someone with ordinary Excel-style data to create a professional visualization suitable for a report, article, course, presentation or video without needing to understand Sankey-specific data preparation or visualization code.
