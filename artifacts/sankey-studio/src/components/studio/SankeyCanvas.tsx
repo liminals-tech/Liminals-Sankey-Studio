@@ -1,5 +1,5 @@
 import { Maximize2, Minus, Pause, Play, Plus, RotateCcw } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { SankeyModel } from "@/lib/sankey";
 
 type Props = {
@@ -21,22 +21,27 @@ export function SankeyCanvas({ model, title, subtitle, background, backgroundIma
   const [zoom, setZoom] = useState(1);
   const [animated, setAnimated] = useState(true);
   const [animationRun, setAnimationRun] = useState(0);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const selectedNode = useMemo(() => model.nodes.find((node) => node.id === selectedId), [model.nodes, selectedId]);
   const selectedLink = useMemo(() => model.links.find((link) => link.id === selectedId), [model.links, selectedId]);
   const safe = (value: number) => Number.isFinite(value) ? value : 0;
   const format = (value: number) => notation === "percent" ? `${((safe(value) / Math.max(model.total, 1)) * 100).toFixed(1)}%` : notation === "compact" ? new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(safe(value)) : new Intl.NumberFormat("en", { maximumFractionDigits: 2 }).format(safe(value));
   const isNodeDimmed = (id: string) => Boolean(selectedId && selectedId !== id && !selectedLink?.source.id.includes(id) && !selectedLink?.target.id.includes(id) && !selectedNode);
+  const fitChart = () => {
+    setZoom(1);
+    canvasRef.current?.scrollTo({ left: 0, top: 0, behavior: "auto" });
+  };
   return (
     <section className="min-h-[430px] flex-1 overflow-hidden rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-[var(--shadow-sm)]" data-testid="panel-sankey-visualization">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[hsl(var(--border))] px-5 py-4 sm:px-7">
         <div><div className="flex items-center gap-2"><span className="size-2 rounded-full bg-[hsl(var(--chart-2))]" /><span className="font-mono text-[10px] uppercase tracking-[.17em] text-[hsl(var(--muted-foreground))]">Live preview</span></div><h1 className="mt-1 font-serif text-[clamp(1.45rem,2vw,2.1rem)] leading-tight tracking-[-.02em]" data-testid="text-chart-title">{title}</h1><p className="mt-1 max-w-xl text-xs text-[hsl(var(--muted-foreground))]" data-testid="text-chart-subtitle">{subtitle}</p></div>
         <div className="flex items-center gap-1 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background)/.6)] p-1">
           <button onClick={() => { setAnimated(!animated); setAnimationRun((run) => run + 1); }} className={`grid size-7 place-items-center rounded ${animated ? "bg-[hsl(var(--secondary))] text-[hsl(var(--primary))]" : "text-[hsl(var(--muted-foreground))]"} hover:bg-[hsl(var(--muted))]`} aria-label={animated ? "Pause flow animation" : "Play flow animation"} data-testid="button-toggle-animation">{animated ? <Pause size={13} /> : <Play size={13} />}</button><button onClick={() => { setAnimated(true); setAnimationRun((run) => run + 1); }} className="grid size-7 place-items-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]" aria-label="Replay flow animation" data-testid="button-replay-animation"><RotateCcw size={13} /></button>
-          <button onClick={() => setZoom(Math.max(.72, zoom - .1))} className="grid size-7 place-items-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]" aria-label="Zoom out" data-testid="button-zoom-out"><Minus size={13} /></button><span className="min-w-[43px] text-center font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{Math.round(zoom * 100)}%</span><button onClick={() => setZoom(Math.min(1.35, zoom + .1))} className="grid size-7 place-items-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]" aria-label="Zoom in" data-testid="button-zoom-in"><Plus size={13} /></button><button onClick={() => setZoom(1)} className="grid size-7 place-items-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]" aria-label="Fit chart" title="Fit chart" data-testid="button-fit-chart"><Maximize2 size={13} /></button>
+          <button onClick={() => setZoom(Math.max(.72, zoom - .1))} className="grid size-7 place-items-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]" aria-label="Zoom out" data-testid="button-zoom-out"><Minus size={13} /></button><span className="min-w-[43px] text-center font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{Math.round(zoom * 100)}%</span><button onClick={() => setZoom(Math.min(1.35, zoom + .1))} className="grid size-7 place-items-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]" aria-label="Zoom in" data-testid="button-zoom-in"><Plus size={13} /></button><button onClick={fitChart} className="flex h-7 items-center gap-1 rounded px-1.5 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]" aria-label="Fit chart" title="Fit chart to available space" data-testid="button-fit-chart"><Maximize2 size={13} /><span className="text-[10px]">Fit</span></button>
           <button onClick={onResetLayout} className="ml-1 grid size-7 place-items-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]" aria-label="Reset layout" data-testid="button-reset-layout"><RotateCcw size={13} /></button>
         </div>
       </div>
-      <div className="studio-grid relative min-h-[355px] overflow-auto p-3 sm:p-5" style={{ backgroundColor: transparent ? "transparent" : background }}>
+      <div ref={canvasRef} className="studio-grid relative min-h-[355px] overflow-auto p-3 sm:p-5" style={{ backgroundColor: transparent ? "transparent" : background }}>
         {model.nodes.length < 2 ? <div className="grid min-h-[330px] place-items-center text-center"><div><p className="font-serif text-xl">Nothing to draw yet.</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Map at least two text columns and a numeric value.</p></div></div> : <svg viewBox="0 0 1220 560" className="sankey-animate mx-auto block h-auto min-w-0 transition-transform duration-200" style={{ width: `${zoom * 100}%`, minWidth: zoom > 1 ? "690px" : undefined }} role="img" aria-label={`Sankey diagram: ${title}`} data-testid="svg-sankey">
           <rect x="0" y="0" width="1220" height="560" fill="transparent" onClick={() => onSelect(null)} />
           {backgroundImage && <image href={backgroundImage} x="0" y="0" width="1220" height="560" preserveAspectRatio="xMidYMid slice" opacity=".16" pointerEvents="none" aria-label="Chart background image"><title>Chart background image</title></image>}
