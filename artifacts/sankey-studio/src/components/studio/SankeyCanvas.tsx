@@ -7,6 +7,7 @@ type Props = {
   title: string;
   subtitle: string;
   background: string;
+  backgroundImage?: string;
   transparent: boolean;
   showLabels: boolean;
   notation: "full" | "compact" | "percent";
@@ -16,7 +17,7 @@ type Props = {
   onResetLayout: () => void;
 };
 
-export function SankeyCanvas({ model, title, subtitle, background, transparent, showLabels, notation, linkOpacity, selectedId, onSelect, onResetLayout }: Props) {
+export function SankeyCanvas({ model, title, subtitle, background, backgroundImage, transparent, showLabels, notation, linkOpacity, selectedId, onSelect, onResetLayout }: Props) {
   const [zoom, setZoom] = useState(1);
   const [animated, setAnimated] = useState(true);
   const [animationRun, setAnimationRun] = useState(0);
@@ -38,6 +39,7 @@ export function SankeyCanvas({ model, title, subtitle, background, transparent, 
       <div className="studio-grid relative min-h-[355px] overflow-auto p-3 sm:p-5" style={{ backgroundColor: transparent ? "transparent" : background }}>
         {model.nodes.length < 2 ? <div className="grid min-h-[330px] place-items-center text-center"><div><p className="font-serif text-xl">Nothing to draw yet.</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Map at least two text columns and a numeric value.</p></div></div> : <svg viewBox="0 0 1000 560" className="sankey-animate mx-auto block h-auto min-w-[690px] transition-transform duration-200" style={{ width: `${Math.max(100, zoom * 100)}%` }} role="img" aria-label={`Sankey diagram: ${title}`} data-testid="svg-sankey">
           <rect x="0" y="0" width="1000" height="560" fill="transparent" onClick={() => onSelect(null)} />
+          {backgroundImage && <image href={backgroundImage} x="0" y="0" width="1000" height="560" preserveAspectRatio="xMidYMid slice" opacity=".16" pointerEvents="none" aria-label="Chart background image"><title>Chart background image</title></image>}
           <g aria-label="Flow links">
             {model.links.map((link, index) => {
               const active = selectedId === link.id;
@@ -46,7 +48,7 @@ export function SankeyCanvas({ model, title, subtitle, background, transparent, 
             })}
           </g>
           <g aria-label="Flow nodes">
-            {model.nodes.map((node, index) => <g key={`${node.id}-${animationRun}`} className="sankey-node cursor-pointer" style={{ animationDelay: `${index * 65}ms`, animationPlayState: animated ? "running" : "paused" }} onClick={(event) => { event.stopPropagation(); onSelect(selectedId === node.id ? null : node.id, { kind: "node", label: node.label, value: node.value }); }} opacity={isNodeDimmed(node.id) ? .22 : 1} data-testid={`node-flow-${node.id}`}><rect x={node.x} y={node.y} width={node.w} height={node.h} rx={3} fill={node.color} className="transition-opacity duration-200" /><text x={node.x < 500 ? node.x - 12 : node.x + node.w + 12} y={node.y + node.h / 2 - 1} textAnchor={node.x < 500 ? "end" : "start"} fill="hsl(var(--foreground))" fontFamily="DM Sans, sans-serif" fontSize="14" fontWeight="600">{showLabels ? node.label : ""}</text><text x={node.x < 500 ? node.x - 12 : node.x + node.w + 12} y={node.y + node.h / 2 + 15} textAnchor={node.x < 500 ? "end" : "start"} fill="hsl(var(--muted-foreground))" fontFamily="DM Mono, monospace" fontSize="10">{showLabels ? format(node.value) : ""}</text></g>)}
+            {model.nodes.map((node, index) => <g key={`${node.id}-${animationRun}`} className="sankey-node cursor-pointer" style={{ animationDelay: `${index * 65}ms`, animationPlayState: animated ? "running" : "paused" }} onClick={(event) => { event.stopPropagation(); onSelect(selectedId === node.id ? null : node.id, { kind: "node", label: node.label, value: node.value }); }} opacity={isNodeDimmed(node.id) ? .22 : 1} data-testid={`node-flow-${node.id}`}><rect x={node.x} y={node.y} width={node.w} height={node.h} rx={3} fill={node.color} className="transition-opacity duration-200" />{node.image && <image href={node.image} x={node.x - 5} y={node.y + Math.max(0, node.h / 2 - 14)} width={node.w + 10} height={Math.min(28, node.h)} preserveAspectRatio="xMidYMid slice" opacity=".9" aria-label={`${node.label} image`}><title>{node.label} image</title></image>}<text x={node.x < 500 ? node.x - 12 : node.x + node.w + 12} y={node.y + node.h / 2 - 1} textAnchor={node.x < 500 ? "end" : "start"} fill="hsl(var(--foreground))" fontFamily="DM Sans, sans-serif" fontSize="14" fontWeight="600">{showLabels ? node.label : ""}</text><text x={node.x < 500 ? node.x - 12 : node.x + node.w + 12} y={node.y + node.h / 2 + 15} textAnchor={node.x < 500 ? "end" : "start"} fill="hsl(var(--muted-foreground))" fontFamily="DM Mono, monospace" fontSize="10">{showLabels ? format(node.value) : ""}</text></g>)}
           </g>
           <g pointerEvents="none"><text x="70" y="535" fill="hsl(var(--muted-foreground))" fontFamily="DM Mono, monospace" fontSize="10" letterSpacing="1">{model.levels.map((level) => level.toUpperCase()).join("   →   ")}</text></g>
         </svg>}

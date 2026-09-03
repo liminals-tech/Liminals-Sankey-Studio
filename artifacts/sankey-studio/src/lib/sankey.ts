@@ -1,6 +1,7 @@
 import type { Row } from "@/data/templates";
+import { sanitizeImageSource } from "@/lib/images";
 
-export type SankeyNode = { id: string; label: string; level: number; value: number; x: number; y: number; w: number; h: number; color: string };
+export type SankeyNode = { id: string; label: string; level: number; value: number; x: number; y: number; w: number; h: number; color: string; image?: string };
 export type SankeyLink = { id: string; source: SankeyNode; target: SankeyNode; value: number; sy: number; ty: number; thickness: number; path: string };
 export type SankeyModel = { nodes: SankeyNode[]; links: SankeyLink[]; total: number; levels: string[] };
 
@@ -11,16 +12,19 @@ const palettes = {
 };
 const finite = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : Number(value) || 0;
 
-export function buildSankeyModel(rows: Row[], levels: string[], valueColumn: string, reverse = false, paletteName: keyof typeof palettes = "signal", nodeWidth = 14): SankeyModel {
+export function buildSankeyModel(rows: Row[], levels: string[], valueColumn: string, reverse = false, paletteName: keyof typeof palettes = "signal", nodeWidth = 14, imageColumn = "", nodeAssets: Record<string, string> = {}): SankeyModel {
   const columns = reverse ? [...levels].reverse() : levels;
   const grouped = new Map<string, number>();
+  const rowImages = new Map<string, string>();
   rows.forEach((row) => {
     const value = finite(row[valueColumn]);
     if (value <= 0 || !columns.every((level) => String(row[level] ?? "").trim())) return;
+    const image = sanitizeImageSource(row[imageColumn]);
     for (let index = 0; index < columns.length - 1; index += 1) {
       const key = `${String(row[columns[index]])}\u0000${String(row[columns[index + 1]])}\u0000${index}`;
       grouped.set(key, (grouped.get(key) ?? 0) + value);
     }
+    if (image) columns.forEach((column, index) => rowImages.set(`${index}:${String(row[column])}`, image));
   });
   const nodeMap = new Map<string, SankeyNode>();
   const getNode = (label: string, level: number) => {
@@ -28,7 +32,7 @@ export function buildSankeyModel(rows: Row[], levels: string[], valueColumn: str
     const existing = nodeMap.get(id);
     if (existing) return existing;
     const palette = palettes[paletteName];
-    const node: SankeyNode = { id, label, level, value: 0, x: 0, y: 0, w: nodeWidth, h: 20, color: palette[level % palette.length] };
+    const node: SankeyNode = { id, label, level, value: 0, x: 0, y: 0, w: nodeWidth, h: 20, color: palette[level % palette.length], image: nodeAssets[id] || rowImages.get(id) };
     nodeMap.set(id, node);
     return node;
   };

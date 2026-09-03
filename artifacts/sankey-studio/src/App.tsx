@@ -50,14 +50,18 @@ function Studio() {
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [gallery, setGallery] = useState<GalleryItem[]>(() => readGallery());
   const [currentChartId, setCurrentChartId] = useState<string>();
+  const [backgroundImage, setBackgroundImage] = useState<string>();
+  const [nodeImageColumn, setNodeImageColumn] = useState("");
+  const [nodeAssets, setNodeAssets] = useState<Record<string, string>>({});
+  const [galleryNotice, setGalleryNotice] = useState("");
 
-  const model = useMemo(() => buildSankeyModel(rows, levels, valueColumn, reverse, palette, nodeWidth), [rows, levels, valueColumn, reverse, palette, nodeWidth, layoutKey]);
+  const model = useMemo(() => buildSankeyModel(rows, levels, valueColumn, reverse, palette, nodeWidth, nodeImageColumn, nodeAssets), [rows, levels, valueColumn, reverse, palette, nodeWidth, nodeImageColumn, nodeAssets, layoutKey]);
   const loadTemplate = (next: DatasetTemplate) => {
-    setTemplate(next); setRows(next.rows); setColumns(next.columns); setLevels(next.levels); setValueColumn("Value"); setTitle(next.title); setSubtitle(next.description); setSelectedId(null); setImportSummary(undefined); setImportError(""); setCurrentChartId(undefined);
+    setTemplate(next); setRows(next.rows); setColumns(next.columns); setLevels(next.levels); setValueColumn("Value"); setTitle(next.title); setSubtitle(next.description); setSelectedId(null); setImportSummary(undefined); setImportError(""); setCurrentChartId(undefined); setBackgroundImage(undefined); setNodeImageColumn(""); setNodeAssets({}); setGalleryNotice("");
   };
   const loadGalleryItem = (item: GalleryItem) => {
     setTemplate({ id: `gallery-${item.chartId}`, title: item.title, eyebrow: "Saved gallery", description: item.description, columns: item.columns, rows: item.rows, levels: item.levels });
-    setRows(item.rows); setColumns(item.columns); setLevels(item.levels); setValueColumn(item.valueColumn); setReverse(item.reverse); setPalette(item.palette); setBackground(item.background); setTransparent(item.transparent); setShowLabels(item.showLabels); setNotation(item.notation); setLinkOpacity(item.linkOpacity); setNodeWidth(item.nodeWidth); setAspect(item.aspect); setTitle(item.title); setSubtitle(item.description); setSelectedId(null); setImportSummary(undefined); setImportError(""); setCurrentChartId(item.chartId);
+    setRows(item.rows); setColumns(item.columns); setLevels(item.levels); setValueColumn(item.valueColumn); setReverse(item.reverse); setPalette(item.palette); setBackground(item.background); setTransparent(item.transparent); setShowLabels(item.showLabels); setNotation(item.notation); setLinkOpacity(item.linkOpacity); setNodeWidth(item.nodeWidth); setAspect(item.aspect); setBackgroundImage(item.backgroundImage); setNodeImageColumn(item.nodeImageColumn ?? ""); setNodeAssets(item.nodeAssets ?? {}); setTitle(item.title); setSubtitle(item.description); setSelectedId(null); setImportSummary(undefined); setImportError(""); setCurrentChartId(item.chartId); setGalleryNotice(item.mediaPersisted === false ? "This chart's images were not retained because browser storage was full." : "");
   };
   const reset = () => loadTemplate(defaultTemplate);
   const onImported = (summary: ImportSummary) => {
@@ -67,7 +71,7 @@ function Studio() {
     const detectedLevels = summary.columns.filter((column) => column !== detectedValue).slice(0, 4);
     if (detectedLevels.length < 2) { setImportError("Map at least two text columns and one numeric value."); return; }
     setTemplate({ ...defaultTemplate, id: "custom", title: summary.fileName ? summary.fileName.replace(/\.[^/.]+$/, "") : "Untitled story", eyebrow: "Imported locally", description: "A local dataset, ready to shape.", columns: summary.columns, rows: summary.rows, levels: detectedLevels });
-    setRows(summary.rows); setColumns(summary.columns); setLevels(detectedLevels); setValueColumn(detectedValue); setTitle(summary.fileName ? summary.fileName.replace(/\.[^/.]+$/, "") : "Untitled story"); setSubtitle("A local dataset, ready to shape."); setSelectedId(null); setImportError(""); setCurrentChartId(undefined);
+    setRows(summary.rows); setColumns(summary.columns); setLevels(detectedLevels); setValueColumn(detectedValue); setTitle(summary.fileName ? summary.fileName.replace(/\.[^/.]+$/, "") : "Untitled story"); setSubtitle("A local dataset, ready to shape."); setSelectedId(null); setImportError(""); setCurrentChartId(undefined); setBackgroundImage(undefined); setNodeImageColumn(""); setNodeAssets({}); setGalleryNotice("");
   };
   const handleSelect = (id: string | null) => setSelectedId(id);
   const frameStyle = aspect === "Auto" ? undefined : { aspectRatio: aspect.replace(":", " / ") };
@@ -75,12 +79,19 @@ function Studio() {
   const openImport = (tab: "file" | "paste" = "file") => { setImportTab(tab); setImportOpen(true); };
   const openExport = () => { setCurrentChartId((id) => id ?? createChartId()); setExportOpen(true); };
   const saveExportToGallery = (chartId: string) => {
-    const item: GalleryItem = { chartId, title: title || "Untitled story", description: subtitle, columns, rows, levels, valueColumn, reverse, palette, background, transparent, showLabels, notation, linkOpacity, nodeWidth, aspect, createdAt: new Date().toISOString() };
-    setGallery((items) => { const next = upsertGalleryItem(items, item); writeGallery(next); return next; });
+    const item: GalleryItem = { chartId, title: title || "Untitled story", description: subtitle, columns, rows, levels, valueColumn, reverse, palette, background, transparent, showLabels, notation, linkOpacity, nodeWidth, aspect, backgroundImage, nodeImageColumn, nodeAssets, createdAt: new Date().toISOString() };
+    const result = writeGallery(upsertGalleryItem(gallery, item));
+    if (result.ok) {
+      setGallery(result.items);
+      setGalleryNotice(result.mediaDropped ? "Chart saved, but its images were too large for browser storage." : `Saved ${chartId} to your local gallery.`);
+    } else {
+      setGalleryNotice("The export completed, but the chart could not be saved to browser storage.");
+    }
     setCurrentChartId(chartId);
   };
   const deleteGalleryItem = (chartId: string) => {
-    setGallery((items) => { const next = items.filter((item) => item.chartId !== chartId); writeGallery(next); return next; });
+    const result = writeGallery(gallery.filter((item) => item.chartId !== chartId));
+    if (result.ok) setGallery(result.items);
     if (currentChartId === chartId) setCurrentChartId(undefined);
   };
   return <div className="studio-noise flex min-h-[100dvh] flex-col bg-[hsl(var(--background))]">
@@ -93,8 +104,9 @@ function Studio() {
             <div><p className="font-mono text-[10px] uppercase tracking-[.2em] text-[hsl(var(--primary))]">A visual instrument for messy tables</p><h2 className="mt-1 max-w-[600px] font-serif text-[clamp(2rem,4.2vw,3.65rem)] leading-[.95] tracking-[-.04em]">Make the movement <em>visible.</em></h2></div>
             <div className="flex items-center gap-2 text-[11px] text-[hsl(var(--muted-foreground))]"><span className="font-mono text-[10px]">{rows.length} rows</span><span className="size-1 rounded-full bg-[hsl(var(--border))]" /><span className="font-mono text-[10px]">{model.links.length} flows</span></div>
           </div>
-          <div className="mt-5" style={frameStyle}><SankeyCanvas model={model} title={title || "Untitled story"} subtitle={subtitle} background={background} transparent={transparent} showLabels={showLabels} notation={notation} linkOpacity={linkOpacity} selectedId={selectedId} onSelect={handleSelect} onResetLayout={() => { setSelectedId(null); setLayoutKey((key) => key + 1); }} /></div>
+          <div className="mt-5" style={frameStyle}><SankeyCanvas model={model} title={title || "Untitled story"} subtitle={subtitle} background={background} backgroundImage={backgroundImage} transparent={transparent} showLabels={showLabels} notation={notation} linkOpacity={linkOpacity} selectedId={selectedId} onSelect={handleSelect} onResetLayout={() => { setSelectedId(null); setLayoutKey((key) => key + 1); }} /></div>
           <p className="mt-3 text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]"><span className="font-semibold text-[hsl(var(--foreground)/.75)]">Reading this:</span> band width is proportional to value. Select a band or node for a precise readout. Every calculation stays on this device.</p>
+          {galleryNotice && <div className="mt-3 rounded-md border border-[hsl(var(--accent)/.45)] bg-[hsl(var(--accent)/.12)] px-3 py-2 text-xs text-[hsl(var(--foreground))]" role="status" data-testid="status-gallery-notice">{galleryNotice}</div>}
           <div className="mt-5"><DataPreview rows={rows} columns={columns} summary={importSummary} onImport={() => openImport()} /></div>
           {importError && <div className="mt-3 flex items-center justify-between rounded-md border border-[hsl(var(--destructive)/.35)] bg-[hsl(var(--destructive)/.07)] px-3 py-2 text-xs text-[hsl(var(--destructive))]" role="alert" data-testid="status-validation-error"><span>{importError}</span><button onClick={() => setImportError("")} className="text-[10px] font-semibold hover:underline" data-testid="button-dismiss-validation">Dismiss</button></div>}
           <div className="mt-5 grid gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card)/.45)] p-3 sm:grid-cols-[minmax(160px,1fr)_minmax(200px,1.7fr)]">
@@ -103,10 +115,10 @@ function Studio() {
           </div>
         </div>
       </main>
-      <Inspector columns={columns} levels={levels} valueColumn={valueColumn} reverse={reverse} setLevels={setLevels} setValueColumn={setValueColumn} setReverse={setReverse} palette={palette} setPalette={setPalette} background={background} setBackground={setBackground} transparent={transparent} setTransparent={setTransparent} showLabels={showLabels} setShowLabels={setShowLabels} notation={notation} setNotation={setNotation} linkOpacity={linkOpacity} setLinkOpacity={setLinkOpacity} nodeWidth={nodeWidth} setNodeWidth={setNodeWidth} aspect={aspect} setAspect={setAspect} collapsed={!inspectorOpen} onToggle={() => setInspectorOpen((open) => !open)} />
+      <Inspector columns={columns} levels={levels} valueColumn={valueColumn} reverse={reverse} setLevels={setLevels} setValueColumn={setValueColumn} setReverse={setReverse} palette={palette} setPalette={setPalette} background={background} setBackground={setBackground} backgroundImage={backgroundImage} setBackgroundImage={setBackgroundImage} transparent={transparent} setTransparent={setTransparent} showLabels={showLabels} setShowLabels={setShowLabels} notation={notation} setNotation={setNotation} imageColumns={columns.filter((column) => column !== valueColumn)} imageColumn={nodeImageColumn} setImageColumn={setNodeImageColumn} nodes={model.nodes.map(({ id, label, level }) => ({ id, label, level }))} nodeAssets={nodeAssets} setNodeAsset={(id, image) => setNodeAssets((assets) => ({ ...assets, [id]: image }))} clearNodeAsset={(id) => setNodeAssets((assets) => { const next = { ...assets }; delete next[id]; return next; })} linkOpacity={linkOpacity} setLinkOpacity={setLinkOpacity} nodeWidth={nodeWidth} setNodeWidth={setNodeWidth} aspect={aspect} setAspect={setAspect} collapsed={!inspectorOpen} onToggle={() => setInspectorOpen((open) => !open)} />
     </div>
     {importOpen && <ImportPanel initialTab={importTab} onImported={(summary) => { onImported(summary); setImportOpen(false); }} onClose={() => setImportOpen(false)} />}
-    {exportOpen && currentChartId && <ExportMenu model={model} chartId={currentChartId} title={title || "Untitled story"} subtitle={subtitle} background={background} transparent={transparent} showLabels={showLabels} notation={notation} onClose={() => setExportOpen(false)} onSaved={saveExportToGallery} />}
+    {exportOpen && currentChartId && <ExportMenu model={model} chartId={currentChartId} title={title || "Untitled story"} subtitle={subtitle} background={background} backgroundImage={backgroundImage} transparent={transparent} showLabels={showLabels} notation={notation} onClose={() => setExportOpen(false)} onSaved={saveExportToGallery} />}
     {helpOpen && <div className="fixed inset-0 z-40 grid place-items-center bg-[hsl(var(--foreground)/.28)] p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="help-title"><div className="fade-up w-full max-w-[440px] rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl"><div className="flex items-start justify-between"><div><p className="font-mono text-[10px] uppercase tracking-[.18em] text-[hsl(var(--primary))]">Quick guide</p><h2 id="help-title" className="mt-1 font-serif text-2xl">A few good moves</h2></div><button onClick={() => setHelpOpen(false)} className="text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]" data-testid="button-close-help">Close</button></div><ol className="mt-5 space-y-3 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]"><li><b className="mr-2 font-mono text-[hsl(var(--primary))]">01</b>Pick an example question, or import a table from your device.</li><li><b className="mr-2 font-mono text-[hsl(var(--primary))]">02</b>Use Map the story to choose the order of your levels and the value column.</li><li><b className="mr-2 font-mono text-[hsl(var(--primary))]">03</b>Click any node or flow to isolate its story, then export a PNG or editable SVG.</li></ol><button onClick={() => setHelpOpen(false)} className="mt-6 w-full rounded-md bg-[hsl(var(--primary))] py-2.5 text-xs font-semibold text-[hsl(var(--primary-foreground))]" data-testid="button-start-exploring">Start exploring</button></div></div>}
   </div>;
 }

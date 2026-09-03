@@ -17,6 +17,10 @@ export type GalleryItem = {
   linkOpacity: number;
   nodeWidth: number;
   aspect: string;
+  backgroundImage?: string;
+  nodeImageColumn?: string;
+  nodeAssets: Record<string, string>;
+  mediaPersisted?: boolean;
   createdAt: string;
 };
 
@@ -41,8 +45,20 @@ export function readGallery(): GalleryItem[] {
 }
 
 export function writeGallery(items: GalleryItem[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, 40)));
+  if (typeof window === "undefined") return { items, mediaDropped: false, ok: false };
+  const limited = items.slice(0, 40);
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(limited));
+    return { items: limited, mediaDropped: false, ok: true };
+  } catch {
+    const lightweight = limited.map((item) => ({ ...item, backgroundImage: undefined, nodeAssets: {}, mediaPersisted: false }));
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lightweight));
+      return { items: lightweight, mediaDropped: true, ok: true };
+    } catch {
+      return { items, mediaDropped: false, ok: false };
+    }
+  }
 }
 
 export function upsertGalleryItem(items: GalleryItem[], next: GalleryItem) {

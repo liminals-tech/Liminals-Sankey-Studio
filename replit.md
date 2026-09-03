@@ -28,7 +28,7 @@ Sankey Studio turns ordinary spreadsheet data into polished Sankey diagrams enti
 ## Architecture decisions
 
 - Uploaded files and pasted data are parsed locally and never sent to a server.
-- Exported chart snapshots are stored in browser localStorage only, with stable chart IDs and per-entry deletion.
+- Exported chart snapshots are stored in browser localStorage only, with stable chart IDs, optional image data, and per-entry deletion.
 - The editor keeps parsing, normalization, model generation, layout, rendering and export separate so date-based animation can be added later.
 - Example datasets are editable starting points, not locked formats.
 

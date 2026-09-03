@@ -1,0 +1,1 @@
+- [Local image assets](image-assets.md) — keep optional chart images client-side and report persistence or export limitations explicitly.

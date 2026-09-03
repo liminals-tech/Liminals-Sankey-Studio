@@ -19,7 +19,7 @@ User uploads: YES — processed ephemerally in the browser
 Public user content: NO
 Marketing email: NO
 Targeted at minors: NO
-Browser-persisted chart data: YES — saved locally so users can reuse exported charts
+Browser-persisted chart data: YES — saved locally so users can reuse exported charts, including optional image data
 
 ## Commerce
 
