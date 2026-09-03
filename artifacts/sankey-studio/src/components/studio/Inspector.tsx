@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Eye, EyeOff, Palette, SlidersHorizontal, WandSparkles } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Palette, SlidersHorizontal, WandSparkles } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 type Props = {
@@ -25,6 +25,8 @@ type Props = {
   setNodeWidth: (value: number) => void;
   aspect: string;
   setAspect: (value: string) => void;
+  collapsed: boolean;
+  onToggle: () => void;
 };
 
 function Section({ title, icon, children, openDefault = true }: { title: string; icon: ReactNode; children: ReactNode; openDefault?: boolean }) {
@@ -38,7 +40,19 @@ export function Inspector(props: Props) {
     if (target < 0 || target >= props.levels.length) return;
     const next = [...props.levels]; [next[index], next[target]] = [next[target], next[index]]; props.setLevels(next);
   };
+  if (props.collapsed) {
+    return (
+      <aside className="flex w-full shrink-0 items-center justify-between border-t border-[hsl(var(--border))] bg-[hsl(var(--background)/.65)] px-5 py-2 lg:w-[52px] lg:flex-col lg:justify-start lg:px-2 lg:py-4" aria-label="Collapsed chart inspector">
+        <span className="hidden font-mono text-[9px] uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))] lg:block [writing-mode:vertical-rl]">Controls</span>
+        <button onClick={props.onToggle} className="grid size-8 place-items-center rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] transition hover:text-[hsl(var(--foreground))]" aria-label="Expand chart inspector" data-testid="button-expand-inspector"><ChevronLeft size={15} /></button>
+      </aside>
+    );
+  }
   return <aside className="w-full shrink-0 border-t border-[hsl(var(--border))] bg-[hsl(var(--background)/.65)] px-5 lg:w-[296px] lg:border-l lg:border-t-0 lg:px-5" aria-label="Chart inspector">
+    <div className="flex items-center justify-between border-b border-[hsl(var(--border))] py-3">
+      <span className="font-mono text-[10px] uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))]">Edit visual</span>
+      <button onClick={props.onToggle} className="grid size-8 place-items-center rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] transition hover:text-[hsl(var(--foreground))]" aria-label="Collapse chart inspector" data-testid="button-collapse-inspector"><ChevronRight size={15} /></button>
+    </div>
     <Section title="Map the story" icon={<WandSparkles size={14} />}>
       <div className="space-y-3">
         <div><label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[.14em] text-[hsl(var(--muted-foreground))]">Hierarchy · drag order</label><div className="space-y-1.5">{props.levels.map((level, index) => <div key={`${level}-${index}`} className="flex items-center gap-2 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-2"><span className="font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{index + 1}</span><select value={level} onChange={(event) => { const next = [...props.levels]; next[index] = event.target.value; props.setLevels(Array.from(new Set(next))); }} className="min-w-0 flex-1 bg-transparent text-xs outline-none" data-testid={`select-hierarchy-${index}`}>{props.columns.filter((column) => column !== props.valueColumn).map((column) => <option key={column} value={column}>{column}</option>)}</select><button onClick={() => move(index, -1)} disabled={index === 0} className="text-[hsl(var(--muted-foreground))] disabled:opacity-25" aria-label={`Move ${level} up`} data-testid={`button-move-level-up-${index}`}><ArrowUp size={13} /></button><button onClick={() => move(index, 1)} disabled={index === props.levels.length - 1} className="text-[hsl(var(--muted-foreground))] disabled:opacity-25" aria-label={`Move ${level} down`} data-testid={`button-move-level-down-${index}`}><ArrowDown size={13} /></button></div>)}</div></div>

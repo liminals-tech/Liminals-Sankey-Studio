@@ -45,6 +45,8 @@ function Studio() {
   const [importSummary, setImportSummary] = useState<ImportSummary>();
   const [importError, setImportError] = useState("");
   const [layoutKey, setLayoutKey] = useState(0);
+  const [dataMenuOpen, setDataMenuOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
 
   const model = useMemo(() => buildSankeyModel(rows, levels, valueColumn, reverse, palette, nodeWidth), [rows, levels, valueColumn, reverse, palette, nodeWidth, layoutKey]);
   const loadTemplate = (next: DatasetTemplate) => {
@@ -65,26 +67,26 @@ function Studio() {
 
   const openImport = (tab: "file" | "paste" = "file") => { setImportTab(tab); setImportOpen(true); };
   return <div className="studio-noise flex min-h-[100dvh] flex-col bg-[hsl(var(--background))]">
-    <TopBar onImport={() => openImport()} onExport={() => setExportOpen(true)} onHelp={() => setHelpOpen(true)} onMenu={() => document.getElementById("dataset-rail")?.scrollIntoView({ behavior: "smooth", block: "start" })} />
+    <TopBar onImport={() => openImport()} onExport={() => setExportOpen(true)} onHelp={() => setHelpOpen(true)} onMenu={() => setDataMenuOpen((open) => !open)} onInspector={() => setInspectorOpen((open) => !open)} dataOpen={dataMenuOpen} inspectorOpen={inspectorOpen} />
     <div className="flex flex-1 flex-col lg:flex-row">
-      <div id="dataset-rail"><DatasetRail templates={datasetTemplates} activeId={template.id} onSelect={loadTemplate} onImport={() => openImport()} onPaste={() => openImport("paste")} onReset={reset} /></div>
+      <div id="dataset-rail"><DatasetRail templates={datasetTemplates} activeId={template.id} onSelect={loadTemplate} onImport={() => openImport()} onPaste={() => openImport("paste")} onReset={reset} collapsed={!dataMenuOpen} onToggle={() => setDataMenuOpen((open) => !open)} /></div>
       <main className="min-w-0 flex-1 px-4 py-5 sm:px-7 sm:py-7">
         <div className="mx-auto max-w-[1160px]">
           <div className="fade-up mb-5 flex flex-wrap items-end justify-between gap-4">
             <div><p className="font-mono text-[10px] uppercase tracking-[.2em] text-[hsl(var(--primary))]">A visual instrument for messy tables</p><h2 className="mt-1 max-w-[600px] font-serif text-[clamp(2rem,4.2vw,3.65rem)] leading-[.95] tracking-[-.04em]">Make the movement <em>visible.</em></h2></div>
             <div className="flex items-center gap-2 text-[11px] text-[hsl(var(--muted-foreground))]"><span className="font-mono text-[10px]">{rows.length} rows</span><span className="size-1 rounded-full bg-[hsl(var(--border))]" /><span className="font-mono text-[10px]">{model.links.length} flows</span></div>
           </div>
-          <DataPreview rows={rows} columns={columns} summary={importSummary} onImport={() => openImport()} />
+          <div className="mt-5" style={frameStyle}><SankeyCanvas model={model} title={title || "Untitled story"} subtitle={subtitle} background={background} transparent={transparent} showLabels={showLabels} notation={notation} linkOpacity={linkOpacity} selectedId={selectedId} onSelect={handleSelect} onResetLayout={() => { setSelectedId(null); setLayoutKey((key) => key + 1); }} /></div>
+          <p className="mt-3 text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]"><span className="font-semibold text-[hsl(var(--foreground)/.75)]">Reading this:</span> band width is proportional to value. Select a band or node for a precise readout. Every calculation stays on this device.</p>
+          <div className="mt-5"><DataPreview rows={rows} columns={columns} summary={importSummary} onImport={() => openImport()} /></div>
           {importError && <div className="mt-3 flex items-center justify-between rounded-md border border-[hsl(var(--destructive)/.35)] bg-[hsl(var(--destructive)/.07)] px-3 py-2 text-xs text-[hsl(var(--destructive))]" role="alert" data-testid="status-validation-error"><span>{importError}</span><button onClick={() => setImportError("")} className="text-[10px] font-semibold hover:underline" data-testid="button-dismiss-validation">Dismiss</button></div>}
           <div className="mt-5 grid gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card)/.45)] p-3 sm:grid-cols-[minmax(160px,1fr)_minmax(200px,1.7fr)]">
             <div><label htmlFor="chart-title" className="mb-1 block text-[10px] font-medium uppercase tracking-[.14em] text-[hsl(var(--muted-foreground))]">Title</label><input id="chart-title" value={title} onChange={(event) => setTitle(event.target.value)} className="w-full border-0 bg-transparent px-0 text-sm font-semibold outline-none placeholder:text-[hsl(var(--muted-foreground))]" data-testid="input-chart-title" /></div>
             <div><label htmlFor="chart-subtitle" className="mb-1 block text-[10px] font-medium uppercase tracking-[.14em] text-[hsl(var(--muted-foreground))]">Subtitle / source note</label><input id="chart-subtitle" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} className="w-full border-0 bg-transparent px-0 text-xs text-[hsl(var(--muted-foreground))] outline-none placeholder:text-[hsl(var(--muted-foreground))]" data-testid="input-chart-subtitle" /></div>
           </div>
-          <div className="mt-5" style={frameStyle}><SankeyCanvas model={model} title={title || "Untitled story"} subtitle={subtitle} background={background} transparent={transparent} showLabels={showLabels} notation={notation} linkOpacity={linkOpacity} selectedId={selectedId} onSelect={handleSelect} onResetLayout={() => { setSelectedId(null); setLayoutKey((key) => key + 1); }} /></div>
-          <p className="mt-3 text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]"><span className="font-semibold text-[hsl(var(--foreground)/.75)]">Reading this:</span> band width is proportional to value. Select a band or node for a precise readout. Every calculation stays on this device.</p>
         </div>
       </main>
-      <Inspector columns={columns} levels={levels} valueColumn={valueColumn} reverse={reverse} setLevels={setLevels} setValueColumn={setValueColumn} setReverse={setReverse} palette={palette} setPalette={setPalette} background={background} setBackground={setBackground} transparent={transparent} setTransparent={setTransparent} showLabels={showLabels} setShowLabels={setShowLabels} notation={notation} setNotation={setNotation} linkOpacity={linkOpacity} setLinkOpacity={setLinkOpacity} nodeWidth={nodeWidth} setNodeWidth={setNodeWidth} aspect={aspect} setAspect={setAspect} />
+      <Inspector columns={columns} levels={levels} valueColumn={valueColumn} reverse={reverse} setLevels={setLevels} setValueColumn={setValueColumn} setReverse={setReverse} palette={palette} setPalette={setPalette} background={background} setBackground={setBackground} transparent={transparent} setTransparent={setTransparent} showLabels={showLabels} setShowLabels={setShowLabels} notation={notation} setNotation={setNotation} linkOpacity={linkOpacity} setLinkOpacity={setLinkOpacity} nodeWidth={nodeWidth} setNodeWidth={setNodeWidth} aspect={aspect} setAspect={setAspect} collapsed={!inspectorOpen} onToggle={() => setInspectorOpen((open) => !open)} />
     </div>
     {importOpen && <ImportPanel initialTab={importTab} onImported={(summary) => { onImported(summary); setImportOpen(false); }} onClose={() => setImportOpen(false)} />}
     {exportOpen && <ExportMenu model={model} title={title || "Untitled story"} subtitle={subtitle} background={background} transparent={transparent} showLabels={showLabels} notation={notation} onClose={() => setExportOpen(false)} />}

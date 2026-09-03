@@ -270,6 +270,24 @@ button { cursor: pointer; }
     linear-gradient(to bottom, hsl(var(--border) / 0.28) 1px, transparent 1px);
   background-size: 26px 26px;
 }
+.sankey-animate .sankey-link {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sankey-link-reveal .7s cubic-bezier(.22,.75,.25,1) both;
+}
+.sankey-animate .sankey-node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sankey-node-reveal .45s cubic-bezier(.22,.75,.25,1) both;
+}
+@keyframes sankey-link-reveal {
+  from { opacity: 0; transform: translateY(8px) scaleY(.94); }
+  to { opacity: .3; transform: translateY(0) scaleY(1); }
+}
+@keyframes sankey-node-reveal {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .studio-noise::after {
   content: "";
   position: fixed;

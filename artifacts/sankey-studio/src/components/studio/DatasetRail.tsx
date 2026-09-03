@@ -1,4 +1,4 @@
-import { Database, FileUp, Plus, RotateCcw, Table2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Database, FileUp, Plus, RotateCcw, Table2 } from "lucide-react";
 import type { DatasetTemplate } from "@/data/templates";
 
 type Props = {
@@ -8,19 +8,31 @@ type Props = {
   onImport: () => void;
   onPaste: () => void;
   onReset: () => void;
+  collapsed: boolean;
+  onToggle: () => void;
 };
 
-export function DatasetRail({ templates, activeId, onSelect, onImport, onPaste, onReset }: Props) {
+export function DatasetRail({ templates, activeId, onSelect, onImport, onPaste, onReset, collapsed, onToggle }: Props) {
+  if (collapsed) {
+    return (
+      <aside className="flex w-full shrink-0 items-center justify-between border-b border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar))] px-3 py-2 text-[hsl(var(--sidebar-foreground))] lg:w-[52px] lg:flex-col lg:justify-start lg:px-2 lg:py-4" aria-label="Collapsed examples menu">
+        <span className="hidden font-mono text-[9px] uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.5)] lg:block [writing-mode:vertical-rl]">Examples</span>
+        <button onClick={onToggle} className="grid size-8 place-items-center rounded-md bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-foreground)/.75)] transition hover:text-[hsl(var(--sidebar-foreground))]" aria-label="Expand examples menu" data-testid="button-expand-datasets"><ChevronRight size={15} /></button>
+      </aside>
+    );
+  }
   return (
     <aside className="flex w-full shrink-0 flex-col border-b border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))] lg:w-[244px] lg:border-b-0 lg:border-r">
-      <div className="flex items-center justify-between px-5 py-5 lg:block">
+      <div className="flex items-center justify-between px-5 py-5">
         <div className="text-[10px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--sidebar-foreground)/.56)]">Explore a question</div>
-        <button onClick={onReset} className="hidden items-center gap-1.5 text-[11px] text-[hsl(var(--sidebar-foreground)/.55)] transition hover:text-[hsl(var(--sidebar-foreground))] lg:flex" data-testid="button-reset-editor">
-          <RotateCcw size={12} /> Reset
-        </button>
-        <button onClick={onReset} className="grid size-8 place-items-center rounded-md bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-foreground)/.7)] lg:hidden" aria-label="Reset editor" data-testid="button-reset-editor-mobile">
-          <RotateCcw size={14} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={onReset} className="flex items-center gap-1.5 text-[11px] text-[hsl(var(--sidebar-foreground)/.55)] transition hover:text-[hsl(var(--sidebar-foreground))]" data-testid="button-reset-editor">
+            <RotateCcw size={12} /> <span className="hidden sm:inline">Reset</span>
+          </button>
+          <button onClick={onToggle} className="grid size-8 place-items-center rounded-md bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-foreground)/.7)] transition hover:text-[hsl(var(--sidebar-foreground))]" aria-label="Collapse examples menu" data-testid="button-collapse-datasets">
+            <ChevronLeft size={14} />
+          </button>
+        </div>
       </div>
       <nav className="flex gap-1 overflow-x-auto px-3 pb-4 lg:block lg:space-y-1 lg:overflow-visible lg:px-3" aria-label="Example datasets">
         {templates.map((template, index) => {
