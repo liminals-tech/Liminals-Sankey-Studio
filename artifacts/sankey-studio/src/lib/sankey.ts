@@ -42,8 +42,16 @@ export function buildSankeyModel(rows: Row[], levels: string[], valueColumn: str
     const level = Number(levelText);
     const source = getNode(sourceLabel, level);
     const target = getNode(targetLabel, level + 1);
-    source.value += value; target.value += value;
     rawLinks.push({ source, target, value });
+  });
+  const incoming = new Map<string, number>();
+  const outgoing = new Map<string, number>();
+  rawLinks.forEach(({ source, target, value }) => {
+    outgoing.set(source.id, (outgoing.get(source.id) ?? 0) + value);
+    incoming.set(target.id, (incoming.get(target.id) ?? 0) + value);
+  });
+  nodeMap.forEach((node) => {
+    node.value = node.level === 0 ? (outgoing.get(node.id) ?? 0) : (incoming.get(node.id) ?? 0);
   });
   const total = rawLinks.reduce((sum, link) => sum + (link.source.level === 0 ? link.value : 0), 0);
   const width = 1220, height = 560, left = 90, right = 250, top = 48, bottom = 45;
