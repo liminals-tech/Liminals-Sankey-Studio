@@ -46,7 +46,7 @@ export function buildSankeyModel(rows: Row[], levels: string[], valueColumn: str
     rawLinks.push({ source, target, value });
   });
   const total = rawLinks.reduce((sum, link) => sum + (link.source.level === 0 ? link.value : 0), 0);
-  const width = 1120, height = 560, left = 90, right = 150, top = 48, bottom = 45;
+  const width = 1220, height = 560, left = 90, right = 250, top = 48, bottom = 45;
   const gap = 18;
   const levelCount = Math.max(columns.length, 1);
   const innerWidth = width - left - right;
