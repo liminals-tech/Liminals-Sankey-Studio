@@ -33,7 +33,7 @@ export function SankeyCanvas({ model, title, subtitle, background, transparent, 
         </div>
       </div>
       <div className="studio-grid relative min-h-[355px] overflow-auto p-3 sm:p-5" style={{ backgroundColor: transparent ? "transparent" : background }}>
-        {model.nodes.length < 2 ? <div className="grid min-h-[330px] place-items-center text-center"><div><p className="font-serif text-xl">Nothing to draw yet.</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Map at least two text columns and a numeric value.</p></div></div> : <svg viewBox="0 0 1000 560" className="mx-auto block h-auto min-w-[690px] transition-transform duration-200" style={{ width: `${Math.max(690, zoom * 100)}%` }} role="img" aria-label={`Sankey diagram: ${title}`} data-testid="svg-sankey">
+        {model.nodes.length < 2 ? <div className="grid min-h-[330px] place-items-center text-center"><div><p className="font-serif text-xl">Nothing to draw yet.</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Map at least two text columns and a numeric value.</p></div></div> : <svg viewBox="0 0 1000 560" className="mx-auto block h-auto min-w-[690px] transition-transform duration-200" style={{ width: `${Math.max(100, zoom * 100)}%` }} role="img" aria-label={`Sankey diagram: ${title}`} data-testid="svg-sankey">
           <rect x="0" y="0" width="1000" height="560" fill="transparent" onClick={() => onSelect(null)} />
           <g aria-label="Flow links">
             {model.links.map((link) => {
