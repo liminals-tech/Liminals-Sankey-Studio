@@ -19,6 +19,7 @@ User uploads: YES — processed ephemerally in the browser
 Public user content: NO
 Marketing email: NO
 Targeted at minors: NO
+Browser-persisted chart data: YES — saved locally so users can reuse exported charts
 
 ## Commerce
 
@@ -34,7 +35,7 @@ Privacy Policy: TO REVIEW
 Cookie & Tracking Policy: NOT REQUIRED
 Terms: TO REVIEW
 Payment terms: NOT REQUIRED
-Data retention: NOT APPLICABLE — no server-side user data is retained
-Data deletion: NOT APPLICABLE — imported data is held only in session memory
+Data retention: DEFINED — gallery entries remain in this browser until the user deletes them or clears site data
+Data deletion: DEFINED — each gallery entry has a delete action; users can also clear browser site data
 Accessibility review: TO REVIEW
 Security review: TO REVIEW

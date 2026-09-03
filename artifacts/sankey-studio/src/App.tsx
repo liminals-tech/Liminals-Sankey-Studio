@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import { Route, Switch, useLocation, Router as WouterRouter } from "wouter";
 import { datasetTemplates, defaultTemplate, type DatasetTemplate, type Row } from "@/data/templates";
 import { parseDelimited, type ImportSummary } from "@/lib/data";
+import { createChartId, readGallery, upsertGalleryItem, writeGallery, type GalleryItem } from "@/lib/gallery";
 import { buildSankeyModel } from "@/lib/sankey";
 import { DataPreview } from "@/components/studio/DataPreview";
 import { DatasetRail } from "@/components/studio/DatasetRail";
@@ -47,10 +48,16 @@ function Studio() {
   const [layoutKey, setLayoutKey] = useState(0);
   const [dataMenuOpen, setDataMenuOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [gallery, setGallery] = useState<GalleryItem[]>(() => readGallery());
+  const [currentChartId, setCurrentChartId] = useState<string>();
 
   const model = useMemo(() => buildSankeyModel(rows, levels, valueColumn, reverse, palette, nodeWidth), [rows, levels, valueColumn, reverse, palette, nodeWidth, layoutKey]);
   const loadTemplate = (next: DatasetTemplate) => {
-    setTemplate(next); setRows(next.rows); setColumns(next.columns); setLevels(next.levels); setValueColumn("Value"); setTitle(next.title); setSubtitle(next.description); setSelectedId(null); setImportSummary(undefined); setImportError("");
+    setTemplate(next); setRows(next.rows); setColumns(next.columns); setLevels(next.levels); setValueColumn("Value"); setTitle(next.title); setSubtitle(next.description); setSelectedId(null); setImportSummary(undefined); setImportError(""); setCurrentChartId(undefined);
+  };
+  const loadGalleryItem = (item: GalleryItem) => {
+    setTemplate({ id: `gallery-${item.chartId}`, title: item.title, eyebrow: "Saved gallery", description: item.description, columns: item.columns, rows: item.rows, levels: item.levels });
+    setRows(item.rows); setColumns(item.columns); setLevels(item.levels); setValueColumn(item.valueColumn); setReverse(item.reverse); setPalette(item.palette); setBackground(item.background); setTransparent(item.transparent); setShowLabels(item.showLabels); setNotation(item.notation); setLinkOpacity(item.linkOpacity); setNodeWidth(item.nodeWidth); setAspect(item.aspect); setTitle(item.title); setSubtitle(item.description); setSelectedId(null); setImportSummary(undefined); setImportError(""); setCurrentChartId(item.chartId);
   };
   const reset = () => loadTemplate(defaultTemplate);
   const onImported = (summary: ImportSummary) => {
@@ -60,16 +67,26 @@ function Studio() {
     const detectedLevels = summary.columns.filter((column) => column !== detectedValue).slice(0, 4);
     if (detectedLevels.length < 2) { setImportError("Map at least two text columns and one numeric value."); return; }
     setTemplate({ ...defaultTemplate, id: "custom", title: summary.fileName ? summary.fileName.replace(/\.[^/.]+$/, "") : "Untitled story", eyebrow: "Imported locally", description: "A local dataset, ready to shape.", columns: summary.columns, rows: summary.rows, levels: detectedLevels });
-    setRows(summary.rows); setColumns(summary.columns); setLevels(detectedLevels); setValueColumn(detectedValue); setTitle(summary.fileName ? summary.fileName.replace(/\.[^/.]+$/, "") : "Untitled story"); setSubtitle("A local dataset, ready to shape."); setSelectedId(null); setImportError("");
+    setRows(summary.rows); setColumns(summary.columns); setLevels(detectedLevels); setValueColumn(detectedValue); setTitle(summary.fileName ? summary.fileName.replace(/\.[^/.]+$/, "") : "Untitled story"); setSubtitle("A local dataset, ready to shape."); setSelectedId(null); setImportError(""); setCurrentChartId(undefined);
   };
   const handleSelect = (id: string | null) => setSelectedId(id);
   const frameStyle = aspect === "Auto" ? undefined : { aspectRatio: aspect.replace(":", " / ") };
 
   const openImport = (tab: "file" | "paste" = "file") => { setImportTab(tab); setImportOpen(true); };
+  const openExport = () => { setCurrentChartId((id) => id ?? createChartId()); setExportOpen(true); };
+  const saveExportToGallery = (chartId: string) => {
+    const item: GalleryItem = { chartId, title: title || "Untitled story", description: subtitle, columns, rows, levels, valueColumn, reverse, palette, background, transparent, showLabels, notation, linkOpacity, nodeWidth, aspect, createdAt: new Date().toISOString() };
+    setGallery((items) => { const next = upsertGalleryItem(items, item); writeGallery(next); return next; });
+    setCurrentChartId(chartId);
+  };
+  const deleteGalleryItem = (chartId: string) => {
+    setGallery((items) => { const next = items.filter((item) => item.chartId !== chartId); writeGallery(next); return next; });
+    if (currentChartId === chartId) setCurrentChartId(undefined);
+  };
   return <div className="studio-noise flex min-h-[100dvh] flex-col bg-[hsl(var(--background))]">
-    <TopBar onImport={() => openImport()} onExport={() => setExportOpen(true)} onHelp={() => setHelpOpen(true)} onMenu={() => setDataMenuOpen((open) => !open)} onInspector={() => setInspectorOpen((open) => !open)} dataOpen={dataMenuOpen} inspectorOpen={inspectorOpen} />
+    <TopBar onImport={() => openImport()} onExport={openExport} onHelp={() => setHelpOpen(true)} onMenu={() => setDataMenuOpen((open) => !open)} onInspector={() => setInspectorOpen((open) => !open)} dataOpen={dataMenuOpen} inspectorOpen={inspectorOpen} />
     <div className="flex flex-1 flex-col lg:flex-row">
-      <div id="dataset-rail"><DatasetRail templates={datasetTemplates} activeId={template.id} onSelect={loadTemplate} onImport={() => openImport()} onPaste={() => openImport("paste")} onReset={reset} collapsed={!dataMenuOpen} onToggle={() => setDataMenuOpen((open) => !open)} /></div>
+      <div id="dataset-rail"><DatasetRail templates={datasetTemplates} activeId={template.id} onSelect={loadTemplate} onImport={() => openImport()} onPaste={() => openImport("paste")} onReset={reset} collapsed={!dataMenuOpen} onToggle={() => setDataMenuOpen((open) => !open)} gallery={gallery} activeGalleryId={currentChartId} onSelectGallery={loadGalleryItem} onDeleteGallery={deleteGalleryItem} /></div>
       <main className="min-w-0 flex-1 px-4 py-5 sm:px-7 sm:py-7">
         <div className="mx-auto max-w-[1160px]">
           <div className="fade-up mb-5 flex flex-wrap items-end justify-between gap-4">
@@ -89,7 +106,7 @@ function Studio() {
       <Inspector columns={columns} levels={levels} valueColumn={valueColumn} reverse={reverse} setLevels={setLevels} setValueColumn={setValueColumn} setReverse={setReverse} palette={palette} setPalette={setPalette} background={background} setBackground={setBackground} transparent={transparent} setTransparent={setTransparent} showLabels={showLabels} setShowLabels={setShowLabels} notation={notation} setNotation={setNotation} linkOpacity={linkOpacity} setLinkOpacity={setLinkOpacity} nodeWidth={nodeWidth} setNodeWidth={setNodeWidth} aspect={aspect} setAspect={setAspect} collapsed={!inspectorOpen} onToggle={() => setInspectorOpen((open) => !open)} />
     </div>
     {importOpen && <ImportPanel initialTab={importTab} onImported={(summary) => { onImported(summary); setImportOpen(false); }} onClose={() => setImportOpen(false)} />}
-    {exportOpen && <ExportMenu model={model} title={title || "Untitled story"} subtitle={subtitle} background={background} transparent={transparent} showLabels={showLabels} notation={notation} onClose={() => setExportOpen(false)} />}
+    {exportOpen && currentChartId && <ExportMenu model={model} chartId={currentChartId} title={title || "Untitled story"} subtitle={subtitle} background={background} transparent={transparent} showLabels={showLabels} notation={notation} onClose={() => setExportOpen(false)} onSaved={saveExportToGallery} />}
     {helpOpen && <div className="fixed inset-0 z-40 grid place-items-center bg-[hsl(var(--foreground)/.28)] p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="help-title"><div className="fade-up w-full max-w-[440px] rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl"><div className="flex items-start justify-between"><div><p className="font-mono text-[10px] uppercase tracking-[.18em] text-[hsl(var(--primary))]">Quick guide</p><h2 id="help-title" className="mt-1 font-serif text-2xl">A few good moves</h2></div><button onClick={() => setHelpOpen(false)} className="text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]" data-testid="button-close-help">Close</button></div><ol className="mt-5 space-y-3 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]"><li><b className="mr-2 font-mono text-[hsl(var(--primary))]">01</b>Pick an example question, or import a table from your device.</li><li><b className="mr-2 font-mono text-[hsl(var(--primary))]">02</b>Use Map the story to choose the order of your levels and the value column.</li><li><b className="mr-2 font-mono text-[hsl(var(--primary))]">03</b>Click any node or flow to isolate its story, then export a PNG or editable SVG.</li></ol><button onClick={() => setHelpOpen(false)} className="mt-6 w-full rounded-md bg-[hsl(var(--primary))] py-2.5 text-xs font-semibold text-[hsl(var(--primary-foreground))]" data-testid="button-start-exploring">Start exploring</button></div></div>}
   </div>;
 }
