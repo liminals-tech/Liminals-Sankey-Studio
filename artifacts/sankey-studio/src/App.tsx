@@ -1,4 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { ClerkProvider, SignIn, SignUp } from "@clerk/react";
+import { publishableKeyFromHost } from "@clerk/react/internal";
+import { shadcn } from "@clerk/themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/ui/toaster";
@@ -20,6 +23,72 @@ import { TopBar } from "@/components/studio/TopBar";
 const queryClient = new QueryClient();
 type Palette = "signal" | "mineral" | "citrus";
 type Notation = "full" | "compact" | "percent";
+
+const clerkPubKey = publishableKeyFromHost(
+  window.location.hostname,
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+);
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+if (!clerkPubKey) {
+  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in .env file");
+}
+
+function stripBase(path: string) {
+  return basePath && path.startsWith(basePath)
+    ? path.slice(basePath.length) || "/"
+    : path;
+}
+
+const clerkAppearance = {
+  theme: shadcn,
+  cssLayerName: "clerk",
+  options: {
+    logoPlacement: "inside" as const,
+    logoLinkUrl: basePath || "/",
+    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+  },
+  variables: {
+    colorPrimary: "hsl(14 82% 64%)",
+    colorForeground: "hsl(195 15% 18%)",
+    colorMutedForeground: "hsl(195 9% 42%)",
+    colorDanger: "hsl(4 65% 54%)",
+    colorBackground: "hsl(42 32% 97%)",
+    colorInput: "hsl(42 27% 94%)",
+    colorInputForeground: "hsl(195 15% 18%)",
+    colorNeutral: "hsl(38 20% 82%)",
+    fontFamily: "DM Sans, sans-serif",
+    borderRadius: "0.4rem",
+  },
+  elements: {
+    rootBox: "w-full flex justify-center",
+    cardBox: "bg-[#f8f5ed] rounded-xl w-[440px] max-w-full overflow-hidden",
+    card: "!shadow-none !border-0 !bg-transparent !rounded-none",
+    footer: "!shadow-none !border-0 !bg-transparent !rounded-none",
+    headerTitle: "font-serif text-[#243033]",
+    headerSubtitle: "text-[#6a7372]",
+    socialButtonsBlockButtonText: "text-[#243033]",
+    formFieldLabel: "text-[#243033]",
+    footerActionLink: "text-[#c85d46]",
+    footerActionText: "text-[#6a7372]",
+    dividerText: "text-[#6a7372]",
+    identityPreviewEditButton: "text-[#c85d46]",
+    formFieldSuccessText: "text-[#2f8980]",
+    alertText: "text-[#a94436]",
+    logoBox: "h-9",
+    logoImage: "max-h-9",
+    socialButtonsBlockButton: "border-[#d9d0c2] bg-[#fbfaf7] hover:bg-[#f1ece2]",
+    formButtonPrimary: "bg-[#c85d46] text-[#243033] hover:bg-[#b94f3b]",
+    formFieldInput: "border-[#cfc4b4] bg-[#fbfaf7] text-[#243033]",
+    footerAction: "bg-transparent",
+    dividerLine: "bg-[#d9d0c2]",
+    alert: "bg-[#fbebe7] border-[#e2aaa0]",
+    otpCodeFieldInput: "border-[#cfc4b4] bg-[#fbfaf7] text-[#243033]",
+    formFieldRow: "text-[#243033]",
+    main: "bg-transparent",
+  },
+};
 
 function Studio() {
   const [template, setTemplate] = useState<DatasetTemplate>(defaultTemplate);
@@ -54,6 +123,7 @@ function Studio() {
   const [nodeImageColumn, setNodeImageColumn] = useState("");
   const [nodeAssets, setNodeAssets] = useState<Record<string, string>>({});
   const [galleryNotice, setGalleryNotice] = useState("");
+  const [, setLocation] = useLocation();
 
   const model = useMemo(() => buildSankeyModel(rows, levels, valueColumn, reverse, palette, nodeWidth, nodeImageColumn, nodeAssets), [rows, levels, valueColumn, reverse, palette, nodeWidth, nodeImageColumn, nodeAssets, layoutKey]);
   const loadTemplate = (next: DatasetTemplate) => {
@@ -95,7 +165,7 @@ function Studio() {
     if (currentChartId === chartId) setCurrentChartId(undefined);
   };
   return <div className="studio-noise flex min-h-[100dvh] flex-col bg-[hsl(var(--background))]">
-    <TopBar onImport={() => openImport()} onExport={openExport} onHelp={() => setHelpOpen(true)} onMenu={() => setDataMenuOpen((open) => !open)} onInspector={() => setInspectorOpen((open) => !open)} dataOpen={dataMenuOpen} inspectorOpen={inspectorOpen} />
+    <TopBar onImport={() => openImport()} onExport={openExport} onHelp={() => setHelpOpen(true)} onMenu={() => setDataMenuOpen((open) => !open)} onInspector={() => setInspectorOpen((open) => !open)} onSignIn={() => setLocation("/sign-in")} onSignUp={() => setLocation("/sign-up")} dataOpen={dataMenuOpen} inspectorOpen={inspectorOpen} />
     <div className="flex flex-1 flex-col lg:flex-row">
       <div id="dataset-rail"><DatasetRail templates={datasetTemplates} activeId={template.id} onSelect={loadTemplate} onImport={() => openImport()} onPaste={() => openImport("paste")} onReset={reset} collapsed={!dataMenuOpen} onToggle={() => setDataMenuOpen((open) => !open)} gallery={gallery} activeGalleryId={currentChartId} onSelectGallery={loadGalleryItem} onDeleteGallery={deleteGalleryItem} /></div>
       <main className="min-w-0 flex-1 px-4 py-5 sm:px-7 sm:py-7">
@@ -123,8 +193,16 @@ function Studio() {
   </div>;
 }
 
+function SignInPage() {
+  return <div className="flex min-h-[100dvh] items-center justify-center bg-[hsl(var(--background))] px-4"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div>;
+}
+
+function SignUpPage() {
+  return <div className="flex min-h-[100dvh] items-center justify-center bg-[hsl(var(--background))] px-4"><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>;
+}
+
 function Router() {
-  return <Switch><Route path="/" component={Studio} /><Route component={NotFound} /></Switch>;
+  return <Switch><Route path="/" component={Studio} /><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /><Route component={NotFound} /></Switch>;
 }
 
 function RoutedErrorBoundary({ children }: { children: ReactNode }) {
@@ -133,7 +211,11 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 }
 
 function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}><RoutedErrorBoundary><Router /></RoutedErrorBoundary></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider>;
+  const ClerkApp = () => {
+    const [, setLocation] = useLocation();
+    return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={clerkAppearance} signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} localization={{ signIn: { start: { title: "Welcome back", subtitle: "Sign in to continue your visual work." } }, signUp: { start: { title: "Create your account", subtitle: "Save your visual work for later." } } }} routerPush={(to) => setLocation(stripBase(to))} routerReplace={(to) => setLocation(stripBase(to), { replace: true })}><QueryClientProvider client={queryClient}><TooltipProvider><RoutedErrorBoundary><Router /></RoutedErrorBoundary><Toaster /></TooltipProvider></QueryClientProvider></ClerkProvider>;
+  };
+  return <WouterRouter base={basePath}><ClerkApp /></WouterRouter>;
 }
 
 export default App;

@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap');
+@layer theme, base, clerk, components, utilities;
 @import 'tailwindcss';
+@import '@clerk/themes/shadcn.css';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
 
@@ -264,6 +266,7 @@
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 ::selection { background: hsl(var(--accent)); color: hsl(var(--foreground)); }
+.cl-formFieldInput::placeholder { color: hsl(var(--muted-foreground)); opacity: 1; }
 
 .studio-grid {
   background-image: linear-gradient(to right, hsl(var(--border) / 0.34) 1px, transparent 1px),

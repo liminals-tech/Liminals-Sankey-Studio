@@ -30,6 +30,8 @@ Sankey Studio turns ordinary spreadsheet data into polished Sankey diagrams enti
 - Uploaded files and pasted data are parsed locally and never sent to a server.
 - Exported chart snapshots are stored in browser localStorage only, with stable chart IDs, optional image data, and per-entry deletion.
 - The editor keeps parsing, normalization, model generation, layout, rendering and export separate; animated GIF frames are rendered locally from the same SVG model.
+- Clerk authentication is optional: the editor remains public, while sign-in and account creation use Clerk's client components and session handling.
+- The API service includes Clerk's production Frontend API proxy, but no application routes require authentication yet.
 - Example datasets are editable starting points, not locked formats.
 
 ## Product
@@ -39,12 +41,12 @@ Users can load a sample or import spreadsheet-style data, map columns or hierarc
 ## User preferences
 
 - Keep the core experience focused on spreadsheet → Sankey → publishable visual.
-- Do not add AI, authentication, databases, payments, cloud storage, collaboration or MP4/video timeline editing to the MVP.
+- Do not add AI, databases, payments, cloud storage, collaboration or MP4/video timeline editing to the MVP.
 
 ## Gotchas
 
 - The web artifact uses the managed workflow so PORT and BASE_PATH are injected automatically.
-- Do not add a backend for browser-only parsing or exporting.
+- Browser-only parsing and exporting remain local; the API service's Clerk proxy exists only to support production auth loading.
 
 ## Pointers
 
