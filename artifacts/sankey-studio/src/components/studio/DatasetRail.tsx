@@ -1,5 +1,6 @@
-import { ChevronLeft, ChevronRight, Database, FileUp, Plus, RotateCcw, Table2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Database, FileUp, GalleryHorizontalEnd, Plus, RotateCcw, Table2, Trash2 } from "lucide-react";
 import type { DatasetTemplate } from "@/data/templates";
+import type { GalleryItem } from "@/lib/gallery";
 
 type Props = {
   templates: DatasetTemplate[];
@@ -10,9 +11,13 @@ type Props = {
   onReset: () => void;
   collapsed: boolean;
   onToggle: () => void;
+  gallery: GalleryItem[];
+  activeGalleryId?: string;
+  onSelectGallery: (item: GalleryItem) => void;
+  onDeleteGallery: (chartId: string) => void;
 };
 
-export function DatasetRail({ templates, activeId, onSelect, onImport, onPaste, onReset, collapsed, onToggle }: Props) {
+export function DatasetRail({ templates, activeId, onSelect, onImport, onPaste, onReset, collapsed, onToggle, gallery, activeGalleryId, onSelectGallery, onDeleteGallery }: Props) {
   if (collapsed) {
     return (
       <aside className="flex w-full shrink-0 items-center justify-between border-b border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar))] px-3 py-2 text-[hsl(var(--sidebar-foreground))] lg:w-[52px] lg:flex-col lg:justify-start lg:px-2 lg:py-4" aria-label="Collapsed examples menu">
@@ -51,6 +56,18 @@ export function DatasetRail({ templates, activeId, onSelect, onImport, onPaste, 
           );
         })}
       </nav>
+      {gallery.length > 0 && <div className="border-t border-[hsl(var(--sidebar-border))] px-3 py-4">
+        <div className="mb-2 flex items-center gap-2 px-2 text-[10px] font-medium uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.56)]"><GalleryHorizontalEnd size={12} /> Gallery <span className="font-mono text-[9px]">({gallery.length})</span></div>
+        <div className="space-y-1.5">
+          {gallery.map((item) => <div key={item.chartId} className={`group flex items-center gap-1 rounded-lg transition ${activeGalleryId === item.chartId ? "bg-[hsl(var(--sidebar-accent))]" : "hover:bg-[hsl(var(--sidebar-accent)/.68)]"}`}>
+            <button onClick={() => onSelectGallery(item)} className="min-w-0 flex-1 px-3 py-2.5 text-left" data-testid={`button-gallery-${item.chartId}`}>
+              <span className="block truncate text-[12px] font-medium text-[hsl(var(--sidebar-foreground)/.8)]">{item.title || "Untitled story"}</span>
+              <span className="mt-1 block truncate font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.42)]">{item.chartId}</span>
+            </button>
+            <button onClick={(event) => { event.stopPropagation(); onDeleteGallery(item.chartId); }} className="mr-2 grid size-7 shrink-0 place-items-center rounded text-[hsl(var(--sidebar-foreground)/.4)] opacity-0 transition hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))] group-hover:opacity-100 focus:opacity-100" aria-label={`Delete ${item.title || "saved chart"}`} data-testid={`button-delete-gallery-${item.chartId}`}><Trash2 size={12} /></button>
+          </div>)}
+        </div>
+      </div>}
       <div className="mt-auto hidden border-t border-[hsl(var(--sidebar-border))] p-4 lg:block">
         <div className="mb-3 flex items-center gap-2 text-[11px] font-medium text-[hsl(var(--sidebar-foreground)/.66)]"><Database size={13} /> Your data</div>
         <button onClick={onImport} className="mb-2 flex w-full items-center gap-2 rounded-md border border-dashed border-[hsl(var(--sidebar-border))] px-3 py-2 text-left text-[11px] text-[hsl(var(--sidebar-foreground)/.65)] transition hover:border-[hsl(var(--sidebar-primary)/.7)] hover:text-[hsl(var(--sidebar-foreground))]" data-testid="button-import-file">
