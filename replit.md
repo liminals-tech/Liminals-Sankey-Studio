@@ -14,7 +14,7 @@ Sankey Studio turns ordinary spreadsheet data into polished Sankey diagrams enti
 - Frontend: React + TypeScript + Vite
 - Visualization: client-side SVG Sankey renderer
 - Imports: browser-side CSV, JSON, XLSX and XLS parsing
-- Output: client-side PNG and SVG export
+- Output: client-side PNG, SVG and animated GIF export
 
 ## Where things live
 
@@ -29,17 +29,17 @@ Sankey Studio turns ordinary spreadsheet data into polished Sankey diagrams enti
 
 - Uploaded files and pasted data are parsed locally and never sent to a server.
 - Exported chart snapshots are stored in browser localStorage only, with stable chart IDs, optional image data, and per-entry deletion.
-- The editor keeps parsing, normalization, model generation, layout, rendering and export separate so date-based animation can be added later.
+- The editor keeps parsing, normalization, model generation, layout, rendering and export separate; animated GIF frames are rendered locally from the same SVG model.
 - Example datasets are editable starting points, not locked formats.
 
 ## Product
 
-Users can load a sample or import spreadsheet-style data, map columns or hierarchy levels, tune the visual treatment and canvas ratio, then export the finished diagram as PNG or SVG.
+Users can load a sample or import spreadsheet-style data, map columns or hierarchy levels, tune the visual treatment and canvas ratio, then export the finished diagram as PNG, SVG or animated GIF with configurable reveal and hold durations.
 
 ## User preferences
 
 - Keep the core experience focused on spreadsheet → Sankey → publishable visual.
-- Do not add AI, authentication, databases, payments, cloud storage, collaboration or video export to the MVP.
+- Do not add AI, authentication, databases, payments, cloud storage, collaboration or MP4/video timeline editing to the MVP.
 
 ## Gotchas
 
