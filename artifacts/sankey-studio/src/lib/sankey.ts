@@ -59,16 +59,18 @@ export function buildSankeyModel(rows: Row[], levels: string[], valueColumn: str
   const levelCount = Math.max(columns.length, 1);
   const innerWidth = width - left - right;
   const innerHeight = height - top - bottom;
-  [...Array(levelCount)].forEach((_, level) => {
-    const nodes = [...nodeMap.values()].filter((node) => node.level === level);
-    const max = Math.max(...nodes.map((node) => node.value), 1);
-    const usable = innerHeight - Math.max(0, nodes.length - 1) * gap;
+  const nodesByLevel = [...Array(levelCount)].map((_, level) => [...nodeMap.values()].filter((node) => node.level === level));
+  const minNodeHeight = 10;
+  const maxNodeCount = Math.max(...nodesByLevel.map((nodes) => nodes.length), 1);
+  const visualGap = maxNodeCount > 1 ? Math.min(gap, Math.max(6, (innerHeight - maxNodeCount * minNodeHeight) / (maxNodeCount - 1))) : 0;
+  const sharedScale = Math.min(...nodesByLevel.filter((nodes) => nodes.length > 0).map((nodes) => (innerHeight - Math.max(0, nodes.length - 1) * visualGap) / Math.max(nodes.reduce((sum, node) => sum + node.value, 0), 1)), 1);
+  nodesByLevel.forEach((nodes, level) => {
     let y = top;
     nodes.forEach((node) => {
       node.x = left + (levelCount === 1 ? innerWidth / 2 : (level / (levelCount - 1)) * innerWidth);
-      node.h = Math.max(18, usable * (node.value / max) * 0.74);
+      node.h = Math.max(minNodeHeight, node.value * sharedScale);
       node.y = y;
-      y += node.h + gap;
+      y += node.h + visualGap;
     });
   });
   const offsets = new Map<string, number>();
