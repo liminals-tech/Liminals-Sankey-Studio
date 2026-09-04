@@ -36,7 +36,7 @@ Sankey Studio turns ordinary spreadsheet data into polished Sankey diagrams enti
 
 ## Product
 
-Users can load a sample or import spreadsheet-style data, map columns or hierarchy levels, tune the visual treatment and canvas ratio, then export the finished diagram as PNG, SVG or animated GIF with configurable reveal and hold durations.
+Users can load a sample or import spreadsheet-style data, map columns or hierarchy levels, tune the visual treatment and canvas ratio, then export the finished diagram as PNG, SVG or animated GIF with configurable frame size, reveal speed and hold durations.
 
 ## User preferences
 
