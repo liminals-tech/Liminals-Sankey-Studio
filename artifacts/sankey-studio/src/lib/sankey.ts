@@ -64,7 +64,7 @@ export function buildSankeyModel(rows: Row[], levels: string[], valueColumn: str
   const minNodeHeight = 10;
   const maxNodeCount = Math.max(...nodesByLevel.map((nodes) => nodes.length), 1);
   const visualGap = maxNodeCount > 1 ? Math.min(gap, Math.max(6, (innerHeight - maxNodeCount * minNodeHeight) / (maxNodeCount - 1))) : 0;
-  const sharedScale = Math.min(...nodesByLevel.filter((nodes) => nodes.length > 0).map((nodes) => (innerHeight - Math.max(0, nodes.length - 1) * visualGap) / Math.max(nodes.reduce((sum, node) => sum + node.value, 0), 1)), 1);
+  const sharedScale = Math.min(...nodesByLevel.filter((nodes) => nodes.length > 0).map((nodes) => (innerHeight - Math.max(0, nodes.length - 1) * visualGap) / Math.max(nodes.reduce((sum, node) => sum + node.value, 0), 1)));
   nodesByLevel.forEach((nodes, level) => {
     let y = top;
     nodes.forEach((node) => {
@@ -108,7 +108,6 @@ export function relayoutSankeyModel(model: SankeyModel, options: SankeyLayoutOpt
   const visualGap = maxNodeCount > 1 ? Math.min(gap, Math.max(6, (innerHeight - maxNodeCount * minNodeHeight) / (maxNodeCount - 1))) : 0;
   const sharedScale = Math.min(
     ...nodesByLevel.filter((levelNodes) => levelNodes.length > 0).map((levelNodes) => (innerHeight - Math.max(0, levelNodes.length - 1) * visualGap) / Math.max(levelNodes.reduce((sum, node) => sum + node.value, 0), 1)),
-    1,
   );
 
   nodesByLevel.forEach((levelNodes, level) => {
