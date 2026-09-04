@@ -4,6 +4,7 @@ import { sanitizeImageSource } from "@/lib/images";
 export type SankeyNode = { id: string; label: string; level: number; value: number; x: number; y: number; w: number; h: number; color: string; image?: string };
 export type SankeyLink = { id: string; source: SankeyNode; target: SankeyNode; value: number; sy: number; ty: number; thickness: number; path: string };
 export type SankeyModel = { nodes: SankeyNode[]; links: SankeyLink[]; total: number; levels: string[] };
+export type SankeyLayoutOptions = { width?: number; height?: number; left?: number; right?: number; top?: number; bottom?: number; gap?: number };
 
 const palettes = {
   signal: ["#ef7957", "#278f86", "#c99d43", "#5b8790", "#be6451", "#83965a", "#8e7665", "#4a9b91"],
@@ -54,7 +55,7 @@ export function buildSankeyModel(rows: Row[], levels: string[], valueColumn: str
     node.value = node.level === 0 ? (outgoing.get(node.id) ?? 0) : (incoming.get(node.id) ?? 0);
   });
   const total = rawLinks.reduce((sum, link) => sum + (link.source.level === 0 ? link.value : 0), 0);
-  const width = 1220, height = 560, left = 90, right = 250, top = 48, bottom = 45;
+  const width = 1220, height = 560, left = 170, right = 190, top = 48, bottom = 45;
   const gap = 18;
   const levelCount = Math.max(columns.length, 1);
   const innerWidth = width - left - right;
@@ -86,6 +87,63 @@ export function buildSankeyModel(rows: Row[], levels: string[], valueColumn: str
     return { id: `link-${index}`, source, target, value, sy, ty, thickness, path };
   });
   return { nodes: [...nodeMap.values()], links, total, levels: columns };
+}
+
+export function relayoutSankeyModel(model: SankeyModel, options: SankeyLayoutOptions = {}): SankeyModel {
+  const width = options.width ?? 1220;
+  const height = options.height ?? 560;
+  const left = options.left ?? 170;
+  const right = options.right ?? 190;
+  const top = options.top ?? 48;
+  const bottom = options.bottom ?? 45;
+  const gap = options.gap ?? 18;
+  const innerWidth = Math.max(1, width - left - right);
+  const innerHeight = Math.max(1, height - top - bottom);
+  const nodes = model.nodes.map((node) => ({ ...node }));
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const levelCount = Math.max(model.levels.length, 1);
+  const nodesByLevel = [...Array(levelCount)].map((_, level) => nodes.filter((node) => node.level === level));
+  const maxNodeCount = Math.max(...nodesByLevel.map((levelNodes) => levelNodes.length), 1);
+  const minNodeHeight = 10;
+  const visualGap = maxNodeCount > 1 ? Math.min(gap, Math.max(6, (innerHeight - maxNodeCount * minNodeHeight) / (maxNodeCount - 1))) : 0;
+  const sharedScale = Math.min(
+    ...nodesByLevel.filter((levelNodes) => levelNodes.length > 0).map((levelNodes) => (innerHeight - Math.max(0, levelNodes.length - 1) * visualGap) / Math.max(levelNodes.reduce((sum, node) => sum + node.value, 0), 1)),
+    1,
+  );
+
+  nodesByLevel.forEach((levelNodes, level) => {
+    let y = top;
+    levelNodes.forEach((node) => {
+      node.x = left + (levelCount === 1 ? innerWidth / 2 : (level / (levelCount - 1)) * innerWidth);
+      node.h = Math.max(minNodeHeight, node.value * sharedScale);
+      node.y = y;
+      y += node.h + visualGap;
+    });
+  });
+
+  const offsets = new Map<string, number>();
+  const links = model.links.map((link) => {
+    const source = nodeById.get(link.source.id);
+    const target = nodeById.get(link.target.id);
+    if (!source || !target) return link;
+    const thickness = Math.max(3, (link.value / Math.max(source.value, target.value, 1)) * source.h * 0.78);
+    const sy = source.y + (offsets.get(`s:${source.id}`) ?? 0) + thickness / 2;
+    const ty = target.y + (offsets.get(`t:${target.id}`) ?? 0) + thickness / 2;
+    offsets.set(`s:${source.id}`, (offsets.get(`s:${source.id}`) ?? 0) + thickness);
+    offsets.set(`t:${target.id}`, (offsets.get(`t:${target.id}`) ?? 0) + thickness);
+    const x1 = source.x + source.w;
+    const x2 = target.x;
+    const curve = Math.max(40, (x2 - x1) * 0.48);
+    const path = `M ${x1} ${sy - thickness / 2} C ${x1 + curve} ${sy - thickness / 2}, ${x2 - curve} ${ty - thickness / 2}, ${x2} ${ty - thickness / 2} L ${x2} ${ty + thickness / 2} C ${x2 - curve} ${ty + thickness / 2}, ${x1 + curve} ${sy + thickness / 2}, ${x1} ${sy + thickness / 2} Z`;
+    return { ...link, source, target, sy, ty, thickness, path };
+  });
+
+  return { ...model, nodes, links };
+}
+
+export function getSankeyLabelFontSize(model: SankeyModel, level: number, availableHeight: number) {
+  const count = Math.max(model.nodes.filter((node) => node.level === level).length, 1);
+  return Math.max(8, Math.min(14, availableHeight / (count * 1.55)));
 }
 
 export const formatValue = (value: number, notation: "full" | "compact" | "percent") => {

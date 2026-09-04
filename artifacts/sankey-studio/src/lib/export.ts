@@ -1,5 +1,5 @@
 import type { SankeyModel } from "@/lib/sankey";
-import { formatValue } from "@/lib/sankey";
+import { formatValue, getSankeyLabelFontSize, relayoutSankeyModel } from "@/lib/sankey";
 import { GIFEncoder, applyPalette, quantize } from "gifenc";
 
 export type SankeyExportOptions = {
@@ -38,15 +38,20 @@ export function modelToSvg(model: SankeyModel, options: SankeyExportOptions) {
   const title = escapeXml(options.title);
   const subtitle = escapeXml(options.subtitle);
   const chartId = options.chartId ? escapeXml(options.chartId) : "";
-  const backgroundImage = options.backgroundImage ? `<image href="${escapeXml(options.backgroundImage)}" x="0" y="0" width="1220" height="650" preserveAspectRatio="xMidYMid slice" opacity=".16"/>` : "";
-  const reveal = options.revealProgress;
-  const revealAlpha = (level: number) => reveal === undefined ? 1 : clamp(reveal * Math.max(model.levels.length, 1) - level + 1);
-  const labels = options.showLabels ? model.nodes.map((node) => `<text opacity="${revealAlpha(node.level)}" x="${node.x < 500 ? node.x - 10 : node.x + node.w + 10}" y="${node.y + node.h / 2 + 4}" text-anchor="${node.x < 500 ? "end" : "start"}" fill="#243033" font-family="DM Sans, sans-serif" font-size="14">${escapeXml(node.label)} · ${formatValue(node.value, options.notation)}</text>`).join("") : "";
-  const metadata = chartId ? `<metadata>sankey-studio-chart-id:${chartId}</metadata>` : "";
-  const nodeImages = model.nodes.filter((node) => node.image).map((node) => `<image href="${escapeXml(node.image ?? "")}" x="${node.x - 5}" y="${node.y + Math.max(0, node.h / 2 - 14)}" width="${node.w + 10}" height="${Math.min(28, node.h)}" preserveAspectRatio="xMidYMid slice" opacity="${(.9 * revealAlpha(node.level)).toFixed(3)}"/>`).join("");
   const frameWidth = options.frameWidth ?? 1220;
   const frameHeight = options.frameHeight ?? 650;
-  return `<svg xmlns="http://www.w3.org/2000/svg" data-sankey-id="${chartId}" width="${frameWidth}" height="${frameHeight}" viewBox="0 0 1220 650" preserveAspectRatio="none">${metadata}<rect width="1220" height="650" fill="${bg}"/>${backgroundImage}<text x="90" y="35" fill="#243033" font-family="DM Sans, sans-serif" font-size="18" font-weight="600">${title}</text><text x="90" y="57" fill="#6a7372" font-family="DM Sans, sans-serif" font-size="12">${subtitle}</text><g>${model.links.map((link) => `<path d="${link.path}" fill="${link.source.color}" opacity="${(.3 * Math.min(revealAlpha(link.source.level), revealAlpha(link.target.level))).toFixed(3)}"/>`).join("")}</g><g>${model.nodes.map((node) => `<rect opacity="${revealAlpha(node.level)}" x="${node.x}" y="${node.y}" width="${node.w}" height="${node.h}" rx="3" fill="${node.color}"/>`).join("")}${nodeImages}</g><g>${labels}</g></svg>`;
+  const viewBoxHeight = 1220 * frameHeight / Math.max(frameWidth, 1);
+  const chartTop = 82;
+  const chartBottom = 24;
+  const chartHeight = Math.max(1, viewBoxHeight - chartTop - chartBottom);
+  const exportModel = relayoutSankeyModel(model, { width: 1220, height: viewBoxHeight, left: 170, right: 190, top: chartTop, bottom: chartBottom });
+  const backgroundImage = options.backgroundImage ? `<image href="${escapeXml(options.backgroundImage)}" x="0" y="0" width="1220" height="${viewBoxHeight}" preserveAspectRatio="xMidYMid slice" opacity=".16"/>` : "";
+  const reveal = options.revealProgress;
+  const revealAlpha = (level: number) => reveal === undefined ? 1 : clamp(reveal * Math.max(exportModel.levels.length, 1) - level + 1);
+  const labels = options.showLabels ? exportModel.nodes.map((node) => `<text opacity="${revealAlpha(node.level)}" x="${node.x < 500 ? node.x - 10 : node.x + node.w + 10}" y="${node.y + node.h / 2}" text-anchor="${node.x < 500 ? "end" : "start"}" dominant-baseline="middle" fill="#243033" font-family="DM Sans, sans-serif" font-size="${getSankeyLabelFontSize(exportModel, node.level, chartHeight).toFixed(1)}">${escapeXml(node.label)} · ${formatValue(node.value, options.notation)}</text>`).join("") : "";
+  const metadata = chartId ? `<metadata>sankey-studio-chart-id:${chartId}</metadata>` : "";
+  const nodeImages = exportModel.nodes.filter((node) => node.image).map((node) => `<image href="${escapeXml(node.image ?? "")}" x="${node.x - 5}" y="${node.y + Math.max(0, node.h / 2 - 14)}" width="${node.w + 10}" height="${Math.min(28, node.h)}" preserveAspectRatio="xMidYMid slice" opacity="${(.9 * revealAlpha(node.level)).toFixed(3)}"/>`).join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" data-sankey-id="${chartId}" width="${frameWidth}" height="${frameHeight}" viewBox="0 0 1220 ${viewBoxHeight}" preserveAspectRatio="xMidYMid meet">${metadata}<rect width="1220" height="${viewBoxHeight}" fill="${bg}"/>${backgroundImage}<text x="170" y="35" fill="#243033" font-family="DM Sans, sans-serif" font-size="18" font-weight="600">${title}</text><text x="170" y="57" fill="#6a7372" font-family="DM Sans, sans-serif" font-size="12">${subtitle}</text><g>${exportModel.links.map((link) => `<path d="${link.path}" fill="${link.source.color}" opacity="${(.3 * Math.min(revealAlpha(link.source.level), revealAlpha(link.target.level))).toFixed(3)}"/>`).join("")}</g><g>${exportModel.nodes.map((node) => `<rect opacity="${revealAlpha(node.level)}" x="${node.x}" y="${node.y}" width="${node.w}" height="${node.h}" rx="3" fill="${node.color}"/>`).join("")}${nodeImages}</g><g>${labels}</g></svg>`;
 }
 
 function escapeXml(value: string) {
