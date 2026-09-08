@@ -31,7 +31,7 @@ The repository pins the pnpm version through `package.json`, so Corepack selects
 ### Start the development server
 
 ```powershell
-pnpm --filter @workspace/sankey-studio run dev
+pnpm run dev
 ```
 
 Open the local URL printed by Vite.

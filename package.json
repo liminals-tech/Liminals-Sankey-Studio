@@ -4,6 +4,7 @@
   "license": "MIT",
   "packageManager": "pnpm@10.26.1",
   "scripts": {
+    "dev": "pnpm --filter @workspace/sankey-studio run dev",
     "preinstall": "node ./scripts/preinstall.mjs",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",

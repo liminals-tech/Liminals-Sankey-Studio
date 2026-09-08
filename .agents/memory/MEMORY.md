@@ -1,3 +1,4 @@
 - [Local image assets](image-assets.md) — keep optional chart images client-side and report persistence or export limitations explicitly.
 - [Responsive chart fit](chart-fit.md) — keep model, live SVG, and export viewBox dimensions synchronized so labels never clip.
 - [Cross-platform workspace setup](cross-platform-workspace.md) — use Node lifecycle runners and let pnpm resolve native optional dependencies per OS.
+- [Optional Clerk local development](optional-clerk-local-development.md) — keep the editor public without keys while preserving the configured production auth shell.
