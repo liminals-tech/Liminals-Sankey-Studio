@@ -24,16 +24,12 @@ const queryClient = new QueryClient();
 type Palette = "signal" | "mineral" | "citrus";
 type Notation = "full" | "compact" | "percent";
 
-const clerkPubKey = publishableKeyFromHost(
-  window.location.hostname,
-  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
-);
+const configuredClerkKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY?.trim();
+const clerkPubKey = configuredClerkKey
+  ? publishableKeyFromHost(window.location.hostname, configuredClerkKey)
+  : undefined;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-if (!clerkPubKey) {
-  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in .env file");
-}
 
 function stripBase(path: string) {
   return basePath && path.startsWith(basePath)
@@ -90,7 +86,7 @@ const clerkAppearance = {
   },
 };
 
-function Studio() {
+function Studio({ authEnabled }: { authEnabled: boolean }) {
   const [template, setTemplate] = useState<DatasetTemplate>(defaultTemplate);
   const [rows, setRows] = useState<Row[]>(defaultTemplate.rows);
   const [columns, setColumns] = useState(defaultTemplate.columns);
@@ -165,7 +161,7 @@ function Studio() {
     if (currentChartId === chartId) setCurrentChartId(undefined);
   };
   return <div className="studio-noise flex min-h-[100dvh] flex-col bg-[hsl(var(--background))]">
-    <TopBar onImport={() => openImport()} onExport={openExport} onHelp={() => setHelpOpen(true)} onMenu={() => setDataMenuOpen((open) => !open)} onInspector={() => setInspectorOpen((open) => !open)} onSignIn={() => setLocation("/sign-in")} onSignUp={() => setLocation("/sign-up")} dataOpen={dataMenuOpen} inspectorOpen={inspectorOpen} />
+     <TopBar authEnabled={authEnabled} onImport={() => openImport()} onExport={openExport} onHelp={() => setHelpOpen(true)} onMenu={() => setDataMenuOpen((open) => !open)} onInspector={() => setInspectorOpen((open) => !open)} onSignIn={() => setLocation("/sign-in")} onSignUp={() => setLocation("/sign-up")} dataOpen={dataMenuOpen} inspectorOpen={inspectorOpen} />
     <div className="flex flex-1 flex-col lg:flex-row">
       <div id="dataset-rail"><DatasetRail templates={datasetTemplates} activeId={template.id} onSelect={loadTemplate} onImport={() => openImport()} onPaste={() => openImport("paste")} onReset={reset} collapsed={!dataMenuOpen} onToggle={() => setDataMenuOpen((open) => !open)} gallery={gallery} activeGalleryId={currentChartId} onSelectGallery={loadGalleryItem} onDeleteGallery={deleteGalleryItem} /></div>
       <main className="min-w-0 flex-1 px-4 py-5 sm:px-7 sm:py-7">
@@ -201,8 +197,8 @@ function SignUpPage() {
   return <div className="flex min-h-[100dvh] items-center justify-center bg-[hsl(var(--background))] px-4"><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>;
 }
 
-function Router() {
-  return <Switch><Route path="/" component={Studio} /><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /><Route component={NotFound} /></Switch>;
+function Router({ authEnabled }: { authEnabled: boolean }) {
+  return <Switch><Route path="/" component={() => <Studio authEnabled={authEnabled} />} />{authEnabled && <><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /></>}<Route component={NotFound} /></Switch>;
 }
 
 function RoutedErrorBoundary({ children }: { children: ReactNode }) {
@@ -213,9 +209,10 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 function App() {
   const ClerkApp = () => {
     const [, setLocation] = useLocation();
-    return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={clerkAppearance} signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} localization={{ signIn: { start: { title: "Welcome back", subtitle: "Sign in to continue your visual work." } }, signUp: { start: { title: "Create your account", subtitle: "Save your visual work for later." } } }} routerPush={(to) => setLocation(stripBase(to))} routerReplace={(to) => setLocation(stripBase(to), { replace: true })}><QueryClientProvider client={queryClient}><TooltipProvider><RoutedErrorBoundary><Router /></RoutedErrorBoundary><Toaster /></TooltipProvider></QueryClientProvider></ClerkProvider>;
+    return <ClerkProvider publishableKey={clerkPubKey!} proxyUrl={clerkProxyUrl} appearance={clerkAppearance} signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} localization={{ signIn: { start: { title: "Welcome back", subtitle: "Sign in to continue your visual work." } }, signUp: { start: { title: "Create your account", subtitle: "Save your visual work for later." } } }} routerPush={(to) => setLocation(stripBase(to))} routerReplace={(to) => setLocation(stripBase(to), { replace: true })}><QueryClientProvider client={queryClient}><TooltipProvider><RoutedErrorBoundary><Router authEnabled /></RoutedErrorBoundary><Toaster /></TooltipProvider></QueryClientProvider></ClerkProvider>;
   };
-  return <WouterRouter base={basePath}><ClerkApp /></WouterRouter>;
+  const PublicApp = () => <QueryClientProvider client={queryClient}><TooltipProvider><RoutedErrorBoundary><Router authEnabled={false} /></RoutedErrorBoundary><Toaster /></TooltipProvider></QueryClientProvider>;
+  return <WouterRouter base={basePath}>{clerkPubKey ? <ClerkApp /> : <PublicApp />}</WouterRouter>;
 }
 
 export default App;
