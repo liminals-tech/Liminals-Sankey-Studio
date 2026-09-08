@@ -1,0 +1,58 @@
+Make this repository cross-platform so that it continues to work correctly on Replit/Linux but can also be cloned from GitHub and developed locally on Windows 11.
+
+Important constraints:
+
+* Do not change the application UI, features, behavior, or data model.
+* Do not redesign or refactor unrelated application code.
+* Keep pnpm as the package manager.
+* Preserve the existing security protections where possible.
+* Do not expose secrets or commit environment variables.
+
+Please inspect the entire repository configuration first, especially:
+
+* package.json
+* pnpm-workspace.yaml
+* .npmrc
+* package scripts
+* workspace packages
+
+Fix the development setup so that:
+
+1. `pnpm install` works both on Replit/Linux and on Windows 11.
+
+2. Remove or replace Linux-only package scripts such as the current `preinstall` script that relies on `sh` and `rm`.
+
+   * If the pnpm-only enforcement is still useful, implement it in a cross-platform way, preferably using Node.js rather than shell-specific commands.
+
+3. Review the platform-specific overrides in `pnpm-workspace.yaml`.
+
+   * The current configuration explicitly removes Windows packages such as win32 builds of esbuild, Rollup, lightningcss, Tailwind oxide, etc.
+   * Change this so the package manager can install the correct native package for the current operating system.
+   * Do not unnecessarily install binaries for every operating system if pnpm can handle platform-specific optional dependencies automatically.
+
+4. Resolve the `ERR_PNPM_IGNORED_BUILDS` issue safely.
+
+   * Determine which packages genuinely require build scripts.
+   * Allow only required/trusted build dependencies rather than globally allowing arbitrary dependency build scripts.
+
+5. Preserve the existing `minimumReleaseAge` supply-chain protection unless there is a strong technical reason to change it.
+
+6. Verify on Replit that:
+
+   * pnpm install succeeds
+   * the application still starts
+   * typecheck succeeds
+   * the production build succeeds
+
+7. Add a short section to the README called "Local development" with exact commands for a fresh Windows machine:
+
+   * prerequisites
+   * dependency installation
+   * development server
+   * production build
+
+The intended workflow is:
+
+Replit → GitHub → Windows 11 local clone → VS Code / Claude Code → GitHub → deployment
+
+At the end, summarize exactly which configuration files you changed and why. Do not make unrelated changes.
