@@ -1,7 +1,9 @@
 import { Maximize2, Minus, Pause, Play, Plus, RotateCcw } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SankeyModel } from "@/lib/sankey";
 import { getSankeyLabelFontSize } from "@/lib/sankey";
+
+const NARROW_VIEWPORT_QUERY = "(max-width: 1023px)";
 
 type Props = {
   model: SankeyModel;
@@ -22,7 +24,15 @@ export function SankeyCanvas({ model, title, subtitle, background, backgroundIma
   const [zoom, setZoom] = useState(1);
   const [animated, setAnimated] = useState(true);
   const [animationRun, setAnimationRun] = useState(0);
+  const [isNarrowViewport, setIsNarrowViewport] = useState(() => window.matchMedia(NARROW_VIEWPORT_QUERY).matches);
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const mql = window.matchMedia(NARROW_VIEWPORT_QUERY);
+    const onChange = () => setIsNarrowViewport(mql.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
   const selectedNode = useMemo(() => model.nodes.find((node) => node.id === selectedId), [model.nodes, selectedId]);
   const selectedLink = useMemo(() => model.links.find((link) => link.id === selectedId), [model.links, selectedId]);
   const sourceNodes = useMemo(() => model.nodes.filter((node) => node.level === 0), [model.nodes]);
@@ -46,7 +56,7 @@ export function SankeyCanvas({ model, title, subtitle, background, backgroundIma
         </div>
       </div>
       <div ref={canvasRef} className="studio-grid relative min-h-[355px] flex-1 overflow-auto p-3 sm:p-5" style={{ backgroundColor: transparent ? "transparent" : background }}>
-        {model.nodes.length < 2 ? <div className="grid min-h-[330px] place-items-center text-center"><div><p className="font-serif text-xl">Nothing to draw yet.</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Map at least two text columns and a numeric value.</p></div></div> : <svg viewBox="0 0 1220 560" className="sankey-animate mx-auto block h-auto min-w-0 transition-transform duration-200" style={{ width: `${zoom * 100}%`, minWidth: `${Math.round(900 * zoom)}px` }} role="img" aria-label={`Sankey diagram: ${title}`} data-testid="svg-sankey">
+        {model.nodes.length < 2 ? <div className="grid min-h-[330px] place-items-center text-center"><div><p className="font-serif text-xl">Nothing to draw yet.</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Map at least two text columns and a numeric value.</p></div></div> : <svg viewBox="0 0 1220 560" className="sankey-animate mx-auto block h-auto min-w-0 transition-transform duration-200" style={{ width: `${zoom * 100}%`, minWidth: isNarrowViewport ? `${Math.round(900 * zoom)}px` : zoom > 1 ? "690px" : undefined }} role="img" aria-label={`Sankey diagram: ${title}`} data-testid="svg-sankey">
           <rect x="0" y="0" width="1220" height="560" fill="transparent" onClick={() => onSelect(null)} />
           {backgroundImage && <image href={backgroundImage} x="0" y="0" width="1220" height="560" preserveAspectRatio="xMidYMid slice" opacity=".16" pointerEvents="none" aria-label="Chart background image"><title>Chart background image</title></image>}
           <g aria-label="Flow links">
