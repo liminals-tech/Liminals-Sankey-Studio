@@ -41,7 +41,7 @@ export default function ChartViewPage({ params }: { params: { chartId: string } 
         {state.status === "not-found" && <div className="fade-up"><p className="font-mono text-[10px] uppercase tracking-[.2em] text-[hsl(var(--primary))]">Not found</p><h1 className="mt-1 font-serif text-3xl">This chart isn't in the shared gallery</h1><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">It may have been removed by whoever created it, or the link is incorrect.</p></div>}
         {state.status === "ready" && (() => {
           const { item } = state;
-          const model = buildSankeyModel(item.rows, item.levels, item.valueColumn, item.reverse, item.palette, item.nodeWidth, item.nodeImageColumn, item.nodeAssets);
+          const model = buildSankeyModel(item.rows, item.levels, item.valueColumn, item.reverse, item.palette, item.nodeWidth, item.nodeImageColumn, item.nodeAssets, item.nodeOrder);
           const myVote = myGalleryVote(item.chartId);
           const score = item.upvotes - item.downvotes;
           return <>

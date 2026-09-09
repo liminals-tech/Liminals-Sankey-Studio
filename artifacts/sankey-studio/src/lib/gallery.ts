@@ -21,6 +21,7 @@ export type GalleryItem = {
   backgroundImage?: string;
   nodeImageColumn?: string;
   nodeAssets: Record<string, string>;
+  nodeOrder: Record<number, string[]>;
   createdAt: string;
   upvotes: number;
   downvotes: number;
@@ -121,6 +122,7 @@ type GalleryRow = {
   background_image: string | null;
   node_image_column: string | null;
   node_assets: Record<string, string>;
+  node_order?: Record<string, string[]> | null;
   created_at: string;
   upvotes?: number;
   downvotes?: number;
@@ -147,6 +149,7 @@ function fromRow(row: GalleryRow): GalleryItem {
     backgroundImage: row.background_image ?? undefined,
     nodeImageColumn: row.node_image_column ?? undefined,
     nodeAssets: row.node_assets ?? {},
+    nodeOrder: row.node_order ?? {},
     createdAt: row.created_at,
     upvotes: row.upvotes ?? 0,
     downvotes: row.downvotes ?? 0,
@@ -199,6 +202,7 @@ export async function createGalleryItem(item: Omit<GalleryItem, "createdAt" | "u
       backgroundImage: item.backgroundImage ?? null,
       nodeImageColumn: item.nodeImageColumn ?? null,
       nodeAssets: item.nodeAssets,
+      nodeOrder: item.nodeOrder ?? {},
     },
     p_owner_secret: ownerSecret,
   });

@@ -13,7 +13,7 @@ const palettes = {
 };
 const finite = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : Number(value) || 0;
 
-export function buildSankeyModel(rows: Row[], levels: string[], valueColumn: string, reverse = false, paletteName: keyof typeof palettes = "signal", nodeWidth = 14, imageColumn = "", nodeAssets: Record<string, string> = {}): SankeyModel {
+export function buildSankeyModel(rows: Row[], levels: string[], valueColumn: string, reverse = false, paletteName: keyof typeof palettes = "signal", nodeWidth = 14, imageColumn = "", nodeAssets: Record<string, string> = {}, nodeOrder: Record<number, string[]> = {}): SankeyModel {
   const columns = reverse ? [...levels].reverse() : levels;
   const grouped = new Map<string, number>();
   const rowImages = new Map<string, string>();
@@ -60,7 +60,15 @@ export function buildSankeyModel(rows: Row[], levels: string[], valueColumn: str
   const levelCount = Math.max(columns.length, 1);
   const innerWidth = width - left - right;
   const innerHeight = height - top - bottom;
-  const nodesByLevel = [...Array(levelCount)].map((_, level) => [...nodeMap.values()].filter((node) => node.level === level));
+  const nodesByLevel = [...Array(levelCount)].map((_, level) => {
+    const natural = [...nodeMap.values()].filter((node) => node.level === level);
+    const order = nodeOrder[level];
+    if (!order || order.length === 0) return natural;
+    const byId = new Map(natural.map((node) => [node.id, node]));
+    const ordered = order.map((id) => byId.get(id)).filter((node): node is SankeyNode => Boolean(node));
+    const remaining = natural.filter((node) => !order.includes(node.id));
+    return [...ordered, ...remaining];
+  });
   const minNodeHeight = 10;
   const maxNodeCount = Math.max(...nodesByLevel.map((nodes) => nodes.length), 1);
   const visualGap = maxNodeCount > 1 ? Math.min(gap, Math.max(6, (innerHeight - maxNodeCount * minNodeHeight) / (maxNodeCount - 1))) : 0;
@@ -86,7 +94,7 @@ export function buildSankeyModel(rows: Row[], levels: string[], valueColumn: str
     const path = `M ${x1} ${sy - thickness / 2} C ${x1 + curve} ${sy - thickness / 2}, ${x2 - curve} ${ty - thickness / 2}, ${x2} ${ty - thickness / 2} L ${x2} ${ty + thickness / 2} C ${x2 - curve} ${ty + thickness / 2}, ${x1 + curve} ${sy + thickness / 2}, ${x1} ${sy + thickness / 2} Z`;
     return { id: `link-${index}`, source, target, value, sy, ty, thickness, path };
   });
-  return { nodes: [...nodeMap.values()], links, total, levels: columns };
+  return { nodes: nodesByLevel.flat(), links, total, levels: columns };
 }
 
 export function relayoutSankeyModel(model: SankeyModel, options: SankeyLayoutOptions = {}): SankeyModel {

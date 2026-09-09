@@ -119,10 +119,11 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
   const [backgroundImage, setBackgroundImage] = useState<string>();
   const [nodeImageColumn, setNodeImageColumn] = useState("");
   const [nodeAssets, setNodeAssets] = useState<Record<string, string>>({});
+  const [nodeOrder, setNodeOrder] = useState<Record<number, string[]>>({});
   const [galleryNotice, setGalleryNotice] = useState("");
   const [, setLocation] = useLocation();
 
-  const model = useMemo(() => buildSankeyModel(rows, levels, valueColumn, reverse, palette, nodeWidth, nodeImageColumn, nodeAssets), [rows, levels, valueColumn, reverse, palette, nodeWidth, nodeImageColumn, nodeAssets, layoutKey]);
+  const model = useMemo(() => buildSankeyModel(rows, levels, valueColumn, reverse, palette, nodeWidth, nodeImageColumn, nodeAssets, nodeOrder), [rows, levels, valueColumn, reverse, palette, nodeWidth, nodeImageColumn, nodeAssets, nodeOrder, layoutKey]);
   useEffect(() => {
     let active = true;
     fetchGallery().then((items) => { if (active) { setGallery(items); setGalleryLoading(false); } });
@@ -136,7 +137,7 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
     return () => { active = false; };
   }, []);
   const loadGalleryItem = (item: GalleryItem) => {
-    setRows(item.rows); setColumns(item.columns); setLevels(item.levels); setValueColumn(item.valueColumn); setReverse(item.reverse); setPalette(item.palette); setBackground(item.background); setTransparent(item.transparent); setShowLabels(item.showLabels); setNotation(item.notation); setLinkOpacity(item.linkOpacity); setNodeWidth(item.nodeWidth); setAspect(item.aspect); setBackgroundImage(item.backgroundImage); setNodeImageColumn(item.nodeImageColumn ?? ""); setNodeAssets(item.nodeAssets ?? {}); setTitle(item.title); setSubtitle(item.description); setSelectedId(null); setImportSummary(undefined); setImportError(""); setCurrentChartId(item.chartId); setGalleryNotice("");
+    setRows(item.rows); setColumns(item.columns); setLevels(item.levels); setValueColumn(item.valueColumn); setReverse(item.reverse); setPalette(item.palette); setBackground(item.background); setTransparent(item.transparent); setShowLabels(item.showLabels); setNotation(item.notation); setLinkOpacity(item.linkOpacity); setNodeWidth(item.nodeWidth); setAspect(item.aspect); setBackgroundImage(item.backgroundImage); setNodeImageColumn(item.nodeImageColumn ?? ""); setNodeAssets(item.nodeAssets ?? {}); setNodeOrder(item.nodeOrder ?? {}); setTitle(item.title); setSubtitle(item.description); setSelectedId(null); setImportSummary(undefined); setImportError(""); setCurrentChartId(item.chartId); setGalleryNotice("");
   };
   const onImported = (summary: ImportSummary) => {
     setImportSummary(summary);
@@ -144,7 +145,7 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
     const detectedValue = summary.columns.find((column) => summary.rows.some((row) => typeof row[column] === "number" && Number.isFinite(Number(row[column])))) ?? summary.columns.at(-1) ?? "";
     const detectedLevels = summary.columns.filter((column) => column !== detectedValue).slice(0, 4);
     if (detectedLevels.length < 2) { setImportError("Map at least two text columns and one numeric value."); return; }
-    setRows(summary.rows); setColumns(summary.columns); setLevels(detectedLevels); setValueColumn(detectedValue); setTitle(summary.fileName ? summary.fileName.replace(/\.[^/.]+$/, "") : "Untitled story"); setSubtitle("A local dataset, ready to shape."); setSelectedId(null); setImportError(""); setCurrentChartId(undefined); setBackgroundImage(undefined); setNodeImageColumn(""); setNodeAssets({}); setGalleryNotice("");
+    setRows(summary.rows); setColumns(summary.columns); setLevels(detectedLevels); setValueColumn(detectedValue); setTitle(summary.fileName ? summary.fileName.replace(/\.[^/.]+$/, "") : "Untitled story"); setSubtitle("A local dataset, ready to shape."); setSelectedId(null); setImportError(""); setCurrentChartId(undefined); setBackgroundImage(undefined); setNodeImageColumn(""); setNodeAssets({}); setNodeOrder({}); setGalleryNotice("");
   };
   const handleSelect = (id: string | null) => setSelectedId(id);
   const frameStyle = aspect === "Auto" ? undefined : { aspectRatio: aspect.replace(":", " / ") };
@@ -152,7 +153,7 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
   const openImport = (tab: "file" | "paste" = "file") => { setImportTab(tab); setImportOpen(true); };
   const openExport = () => { setCurrentChartId((id) => id ?? createChartId()); setExportOpen(true); };
   const saveExportToGallery = async (chartId: string) => {
-    const item: Omit<GalleryItem, "createdAt" | "upvotes" | "downvotes"> = { chartId, title: title || "Untitled story", description: subtitle, columns, rows, levels, valueColumn, reverse, palette, background, transparent, showLabels, notation, linkOpacity, nodeWidth, aspect, backgroundImage, nodeImageColumn, nodeAssets };
+    const item: Omit<GalleryItem, "createdAt" | "upvotes" | "downvotes"> = { chartId, title: title || "Untitled story", description: subtitle, columns, rows, levels, valueColumn, reverse, palette, background, transparent, showLabels, notation, linkOpacity, nodeWidth, aspect, backgroundImage, nodeImageColumn, nodeAssets, nodeOrder };
     const result = await createGalleryItem(item);
     if (result.ok) {
       setGallery((current) => [result.item, ...current.filter((existing) => existing.chartId !== chartId)].slice(0, 40));
@@ -183,7 +184,7 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
             <div><p className="font-mono text-[10px] uppercase tracking-[.2em] text-[hsl(var(--primary))]">A visual instrument for messy tables</p><h2 className="mt-1 max-w-[600px] font-serif text-[clamp(2rem,4.2vw,3.65rem)] leading-[.95] tracking-[-.04em]">Make the movement <em>visible.</em></h2></div>
             <div className="flex items-center gap-2 text-[11px] text-[hsl(var(--muted-foreground))]"><span className="font-mono text-[10px]">{rows.length} rows</span><span className="size-1 rounded-full bg-[hsl(var(--border))]" /><span className="font-mono text-[10px]">{model.links.length} flows</span></div>
           </div>
-          <div className={`mt-5${aspect === "Auto" ? "" : " flex"}`} style={frameStyle}><SankeyCanvas model={model} title={title || "Untitled story"} subtitle={subtitle} background={background} backgroundImage={backgroundImage} transparent={transparent} showLabels={showLabels} notation={notation} linkOpacity={linkOpacity} selectedId={selectedId} onSelect={handleSelect} onResetLayout={() => { setSelectedId(null); setLayoutKey((key) => key + 1); }} /></div>
+          <div className={`mt-5${aspect === "Auto" ? "" : " flex"}`} style={frameStyle}><SankeyCanvas model={model} title={title || "Untitled story"} subtitle={subtitle} background={background} backgroundImage={backgroundImage} transparent={transparent} showLabels={showLabels} notation={notation} linkOpacity={linkOpacity} selectedId={selectedId} onSelect={handleSelect} onResetLayout={() => { setSelectedId(null); setNodeOrder({}); setLayoutKey((key) => key + 1); }} onReorderNode={(level, orderedIds) => setNodeOrder((current) => ({ ...current, [level]: orderedIds }))} /></div>
           <p className="mt-3 text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]"><span className="font-semibold text-[hsl(var(--foreground)/.75)]">Reading this:</span> band width is proportional to value. Select a band or node for a precise readout. Every calculation stays on this device.</p>
           {galleryNotice && <div className="mt-3 rounded-md border border-[hsl(var(--accent)/.45)] bg-[hsl(var(--accent)/.12)] px-3 py-2 text-xs text-[hsl(var(--foreground))]" role="status" data-testid="status-gallery-notice">{galleryNotice}</div>}
           <div className="mt-5"><DataPreview rows={rows} columns={columns} levels={levels} valueColumn={valueColumn} summary={importSummary} onImport={() => openImport()} /></div>

@@ -3,6 +3,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { SankeyModel } from "@/lib/sankey";
 import { getSankeyLabelFontSize } from "@/lib/sankey";
 
+// A drag is distinguished from a click by movement in *screen* pixels
+// (zoom-independent) so a small jitter while clicking never misfires as a
+// reorder, and a deliberate drag never accidentally also selects the node.
+const DRAG_THRESHOLD_PX = 4;
+
 const NARROW_VIEWPORT_QUERY = "(max-width: 1023px)";
 
 type Props = {
@@ -18,14 +23,17 @@ type Props = {
   selectedId: string | null;
   onSelect: (id: string | null, detail?: { kind: "node" | "link"; label: string; value: number; from?: string; to?: string }) => void;
   onResetLayout: () => void;
+  onReorderNode?: (level: number, orderedIds: string[]) => void;
 };
 
-export function SankeyCanvas({ model, title, subtitle, background, backgroundImage, transparent, showLabels, notation, linkOpacity, selectedId, onSelect, onResetLayout }: Props) {
+export function SankeyCanvas({ model, title, subtitle, background, backgroundImage, transparent, showLabels, notation, linkOpacity, selectedId, onSelect, onResetLayout, onReorderNode }: Props) {
   const [zoom, setZoom] = useState(1);
   const [animated, setAnimated] = useState(true);
   const [animationRun, setAnimationRun] = useState(0);
   const [isNarrowViewport, setIsNarrowViewport] = useState(() => window.matchMedia(NARROW_VIEWPORT_QUERY).matches);
+  const [drag, setDrag] = useState<{ nodeId: string; startClientY: number; startSvgY: number; deltaY: number } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
     const mql = window.matchMedia(NARROW_VIEWPORT_QUERY);
@@ -45,6 +53,39 @@ export function SankeyCanvas({ model, title, subtitle, background, backgroundIma
     setZoom(1);
     canvasRef.current?.scrollTo({ left: 0, top: 0, behavior: "auto" });
   };
+  const toSvgY = (clientY: number) => {
+    const svg = svgRef.current;
+    const ctm = svg?.getScreenCTM();
+    if (!svg || !ctm) return clientY;
+    const point = svg.createSVGPoint();
+    point.x = 0;
+    point.y = clientY;
+    return point.matrixTransform(ctm.inverse()).y;
+  };
+  const handleNodePointerDown = (event: React.PointerEvent<SVGGElement>, node: SankeyModel["nodes"][number]) => {
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDrag({ nodeId: node.id, startClientY: event.clientY, startSvgY: toSvgY(event.clientY), deltaY: 0 });
+  };
+  const handleNodePointerMove = (event: React.PointerEvent<SVGGElement>, node: SankeyModel["nodes"][number]) => {
+    if (!drag || drag.nodeId !== node.id) return;
+    setDrag({ ...drag, deltaY: toSvgY(event.clientY) - drag.startSvgY });
+  };
+  const handleNodePointerUp = (event: React.PointerEvent<SVGGElement>, node: SankeyModel["nodes"][number]) => {
+    if (!drag || drag.nodeId !== node.id) return;
+    const movedPx = Math.abs(event.clientY - drag.startClientY);
+    if (movedPx < DRAG_THRESHOLD_PX) {
+      onSelect(selectedId === node.id ? null : node.id, { kind: "node", label: node.label, value: node.value });
+    } else if (onReorderNode) {
+      const siblings = model.nodes.filter((sibling) => sibling.level === node.level && sibling.id !== node.id).sort((a, b) => a.y - b.y);
+      const draggedMidY = node.y + drag.deltaY + node.h / 2;
+      const newIndex = siblings.findIndex((sibling) => draggedMidY < sibling.y + sibling.h / 2);
+      const insertAt = newIndex === -1 ? siblings.length : newIndex;
+      const orderedIds = [...siblings.slice(0, insertAt).map((sibling) => sibling.id), node.id, ...siblings.slice(insertAt).map((sibling) => sibling.id)];
+      onReorderNode(node.level, orderedIds);
+    }
+    setDrag(null);
+  };
   return (
     <section className="flex min-h-[430px] flex-1 flex-col overflow-hidden rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-[var(--shadow-sm)]" data-testid="panel-sankey-visualization">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[hsl(var(--border))] px-5 py-4 sm:px-7">
@@ -56,7 +97,7 @@ export function SankeyCanvas({ model, title, subtitle, background, backgroundIma
         </div>
       </div>
       <div ref={canvasRef} className="studio-grid relative min-h-[355px] flex-1 overflow-auto p-3 sm:p-5" style={{ backgroundColor: transparent ? "transparent" : background }}>
-        {model.nodes.length < 2 ? <div className="grid min-h-[330px] place-items-center text-center"><div><p className="font-serif text-xl">Nothing to draw yet.</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Map at least two text columns and a numeric value.</p></div></div> : <svg viewBox="0 0 1220 560" className="sankey-animate mx-auto block h-auto min-w-0 transition-transform duration-200" style={{ width: `${zoom * 100}%`, minWidth: isNarrowViewport ? `${Math.round(900 * zoom)}px` : zoom > 1 ? "690px" : undefined }} role="img" aria-label={`Sankey diagram: ${title}`} data-testid="svg-sankey">
+        {model.nodes.length < 2 ? <div className="grid min-h-[330px] place-items-center text-center"><div><p className="font-serif text-xl">Nothing to draw yet.</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Map at least two text columns and a numeric value.</p></div></div> : <svg ref={svgRef} viewBox="0 0 1220 560" className="sankey-animate mx-auto block h-auto min-w-0 transition-transform duration-200" style={{ width: `${zoom * 100}%`, minWidth: isNarrowViewport ? `${Math.round(900 * zoom)}px` : zoom > 1 ? "690px" : undefined }} role="img" aria-label={`Sankey diagram: ${title}`} data-testid="svg-sankey">
           <rect x="0" y="0" width="1220" height="560" fill="transparent" onClick={() => onSelect(null)} />
           {backgroundImage && <image href={backgroundImage} x="0" y="0" width="1220" height="560" preserveAspectRatio="xMidYMid slice" opacity=".16" pointerEvents="none" aria-label="Chart background image"><title>Chart background image</title></image>}
           <g aria-label="Flow links">
@@ -67,7 +108,7 @@ export function SankeyCanvas({ model, title, subtitle, background, backgroundIma
             })}
           </g>
           <g aria-label="Flow nodes">
-            {model.nodes.map((node, index) => { const labelSize = getSankeyLabelFontSize(model, node.level, 467); return <g key={`${node.id}-${animationRun}`} className="sankey-node cursor-pointer" style={{ animationDelay: `${index * 65}ms`, animationPlayState: animated ? "running" : "paused" }} onClick={(event) => { event.stopPropagation(); onSelect(selectedId === node.id ? null : node.id, { kind: "node", label: node.label, value: node.value }); }} opacity={isNodeDimmed(node.id) ? .22 : 1} data-testid={`node-flow-${node.id}`}><rect x={node.x} y={node.y} width={node.w} height={node.h} rx={3} fill={node.color} className="transition-opacity duration-200" />{node.image && <image href={node.image} x={node.x - 5} y={node.y + Math.max(0, node.h / 2 - 14)} width={node.w + 10} height={Math.min(28, node.h)} preserveAspectRatio="xMidYMid slice" opacity=".9" aria-label={`${node.label} image`}><title>{node.label} image</title></image>}<text x={node.x < 500 ? node.x - 12 : node.x + node.w + 12} y={node.y + node.h / 2 - 1} textAnchor={node.x < 500 ? "end" : "start"} fill="hsl(var(--foreground))" fontFamily="DM Sans, sans-serif" fontSize={labelSize} fontWeight="600">{showLabels ? node.label : ""}</text><text x={node.x < 500 ? node.x - 12 : node.x + node.w + 12} y={node.y + node.h / 2 + 15} textAnchor={node.x < 500 ? "end" : "start"} fill="hsl(var(--muted-foreground))" fontFamily="DM Mono, monospace" fontSize={Math.max(8, labelSize - 3)}>{showLabels ? format(node.value) : ""}</text></g>; })}
+            {model.nodes.map((node, index) => { const labelSize = getSankeyLabelFontSize(model, node.level, 467); const dragging = Boolean(onReorderNode && drag?.nodeId === node.id); return <g key={`${node.id}-${animationRun}`} className={`${dragging ? "" : "sankey-node transition-opacity duration-200"} ${onReorderNode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`} style={{ animationDelay: `${index * 65}ms`, animationPlayState: animated ? "running" : "paused", transform: dragging ? `translateY(${drag!.deltaY}px)` : undefined, touchAction: "none" }} onPointerDown={(event) => handleNodePointerDown(event, node)} onPointerMove={(event) => handleNodePointerMove(event, node)} onPointerUp={(event) => handleNodePointerUp(event, node)} opacity={isNodeDimmed(node.id) ? .22 : 1} data-testid={`node-flow-${node.id}`}><rect x={node.x} y={node.y} width={node.w} height={node.h} rx={3} fill={node.color} />{node.image && <image href={node.image} x={node.x - 5} y={node.y + Math.max(0, node.h / 2 - 14)} width={node.w + 10} height={Math.min(28, node.h)} preserveAspectRatio="xMidYMid slice" opacity=".9" aria-label={`${node.label} image`}><title>{node.label} image</title></image>}<text x={node.x < 500 ? node.x - 12 : node.x + node.w + 12} y={node.y + node.h / 2 - 1} textAnchor={node.x < 500 ? "end" : "start"} fill="hsl(var(--foreground))" fontFamily="DM Sans, sans-serif" fontSize={labelSize} fontWeight="600">{showLabels ? node.label : ""}</text><text x={node.x < 500 ? node.x - 12 : node.x + node.w + 12} y={node.y + node.h / 2 + 15} textAnchor={node.x < 500 ? "end" : "start"} fill="hsl(var(--muted-foreground))" fontFamily="DM Mono, monospace" fontSize={Math.max(8, labelSize - 3)}>{showLabels ? format(node.value) : ""}</text></g>; })}
           </g>
           <g pointerEvents="none"><text x="70" y="535" fill="hsl(var(--muted-foreground))" fontFamily="DM Mono, monospace" fontSize="10" letterSpacing="1">{model.levels.map((level) => level.toUpperCase()).join("   →   ")}</text></g>
         </svg>}

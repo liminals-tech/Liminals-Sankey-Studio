@@ -32,7 +32,7 @@ function relativeTime(iso: string): string {
 // execute embedded scripts the way inline markup could.
 function GalleryThumbnail({ item }: { item: GalleryItem }) {
   const src = useMemo(() => {
-    const model = buildSankeyModel(item.rows, item.levels, item.valueColumn, item.reverse, item.palette, item.nodeWidth, item.nodeImageColumn, item.nodeAssets);
+    const model = buildSankeyModel(item.rows, item.levels, item.valueColumn, item.reverse, item.palette, item.nodeWidth, item.nodeImageColumn, item.nodeAssets, item.nodeOrder);
     const svg = modelToSvg(model, { title: "", subtitle: "", background: item.background, transparent: item.transparent, showLabels: false, notation: item.notation, backgroundImage: item.backgroundImage });
     return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
   }, [item]);
