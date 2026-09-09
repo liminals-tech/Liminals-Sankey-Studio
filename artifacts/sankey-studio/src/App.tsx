@@ -8,9 +8,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { Route, Switch, useLocation, Router as WouterRouter } from "wouter";
-import { datasetTemplates, defaultTemplate, type DatasetTemplate, type Row } from "@/data/templates";
+import { defaultTemplate, type Row } from "@/data/templates";
 import { parseDelimited, type ImportSummary } from "@/lib/data";
-import { createChartId, createGalleryItem, deleteGalleryItem as deleteGalleryItemRemote, fetchGallery, ownsGalleryItem, type GalleryItem } from "@/lib/gallery";
+import { createChartId, createGalleryItem, deleteGalleryItem as deleteGalleryItemRemote, fetchGallery, myGalleryVote, ownsGalleryItem, voteOnGalleryItem, type GalleryItem } from "@/lib/gallery";
 import { buildSankeyModel } from "@/lib/sankey";
 import { DataPreview } from "@/components/studio/DataPreview";
 import { DatasetRail } from "@/components/studio/DatasetRail";
@@ -87,7 +87,6 @@ const clerkAppearance = {
 };
 
 function Studio({ authEnabled }: { authEnabled: boolean }) {
-  const [template, setTemplate] = useState<DatasetTemplate>(defaultTemplate);
   const [rows, setRows] = useState<Row[]>(defaultTemplate.rows);
   const [columns, setColumns] = useState(defaultTemplate.columns);
   const [levels, setLevels] = useState(defaultTemplate.levels);
@@ -128,21 +127,15 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
     fetchGallery().then((items) => { if (active) { setGallery(items); setGalleryLoading(false); } });
     return () => { active = false; };
   }, []);
-  const loadTemplate = (next: DatasetTemplate) => {
-    setTemplate(next); setRows(next.rows); setColumns(next.columns); setLevels(next.levels); setValueColumn("Value"); setTitle(next.title); setSubtitle(next.description); setSelectedId(null); setImportSummary(undefined); setImportError(""); setCurrentChartId(undefined); setBackgroundImage(undefined); setNodeImageColumn(""); setNodeAssets({}); setGalleryNotice("");
-  };
   const loadGalleryItem = (item: GalleryItem) => {
-    setTemplate({ id: `gallery-${item.chartId}`, title: item.title, eyebrow: "Saved gallery", description: item.description, columns: item.columns, rows: item.rows, levels: item.levels });
     setRows(item.rows); setColumns(item.columns); setLevels(item.levels); setValueColumn(item.valueColumn); setReverse(item.reverse); setPalette(item.palette); setBackground(item.background); setTransparent(item.transparent); setShowLabels(item.showLabels); setNotation(item.notation); setLinkOpacity(item.linkOpacity); setNodeWidth(item.nodeWidth); setAspect(item.aspect); setBackgroundImage(item.backgroundImage); setNodeImageColumn(item.nodeImageColumn ?? ""); setNodeAssets(item.nodeAssets ?? {}); setTitle(item.title); setSubtitle(item.description); setSelectedId(null); setImportSummary(undefined); setImportError(""); setCurrentChartId(item.chartId); setGalleryNotice("");
   };
-  const reset = () => loadTemplate(defaultTemplate);
   const onImported = (summary: ImportSummary) => {
     setImportSummary(summary);
     if (!summary.rows.length) { setImportError(summary.errors[0] ?? "No usable rows were found."); return; }
     const detectedValue = summary.columns.find((column) => summary.rows.some((row) => typeof row[column] === "number" && Number.isFinite(Number(row[column])))) ?? summary.columns.at(-1) ?? "";
     const detectedLevels = summary.columns.filter((column) => column !== detectedValue).slice(0, 4);
     if (detectedLevels.length < 2) { setImportError("Map at least two text columns and one numeric value."); return; }
-    setTemplate({ ...defaultTemplate, id: "custom", title: summary.fileName ? summary.fileName.replace(/\.[^/.]+$/, "") : "Untitled story", eyebrow: "Imported locally", description: "A local dataset, ready to shape.", columns: summary.columns, rows: summary.rows, levels: detectedLevels });
     setRows(summary.rows); setColumns(summary.columns); setLevels(detectedLevels); setValueColumn(detectedValue); setTitle(summary.fileName ? summary.fileName.replace(/\.[^/.]+$/, "") : "Untitled story"); setSubtitle("A local dataset, ready to shape."); setSelectedId(null); setImportError(""); setCurrentChartId(undefined); setBackgroundImage(undefined); setNodeImageColumn(""); setNodeAssets({}); setGalleryNotice("");
   };
   const handleSelect = (id: string | null) => setSelectedId(id);
@@ -151,7 +144,7 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
   const openImport = (tab: "file" | "paste" = "file") => { setImportTab(tab); setImportOpen(true); };
   const openExport = () => { setCurrentChartId((id) => id ?? createChartId()); setExportOpen(true); };
   const saveExportToGallery = async (chartId: string) => {
-    const item: Omit<GalleryItem, "createdAt"> = { chartId, title: title || "Untitled story", description: subtitle, columns, rows, levels, valueColumn, reverse, palette, background, transparent, showLabels, notation, linkOpacity, nodeWidth, aspect, backgroundImage, nodeImageColumn, nodeAssets };
+    const item: Omit<GalleryItem, "createdAt" | "upvotes" | "downvotes"> = { chartId, title: title || "Untitled story", description: subtitle, columns, rows, levels, valueColumn, reverse, palette, background, transparent, showLabels, notation, linkOpacity, nodeWidth, aspect, backgroundImage, nodeImageColumn, nodeAssets };
     const result = await createGalleryItem(item);
     if (result.ok) {
       setGallery((current) => [result.item, ...current.filter((existing) => existing.chartId !== chartId)].slice(0, 40));
@@ -168,10 +161,14 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
     if (removed) setGallery((current) => current.filter((item) => item.chartId !== chartId));
     if (currentChartId === chartId) setCurrentChartId(undefined);
   };
+  const voteGalleryItem = async (chartId: string, vote: 1 | -1) => {
+    const result = await voteOnGalleryItem(chartId, vote);
+    if (result.ok) setGallery((current) => current.map((item) => item.chartId === chartId ? { ...item, upvotes: result.upvotes, downvotes: result.downvotes } : item));
+  };
   return <div className="studio-noise flex min-h-[100dvh] flex-col bg-[hsl(var(--background))]">
      <TopBar authEnabled={authEnabled} onImport={() => openImport()} onExport={openExport} onHelp={() => setHelpOpen(true)} onMenu={() => setDataMenuOpen((open) => !open)} onInspector={() => setInspectorOpen((open) => !open)} onSignIn={() => setLocation("/sign-in")} onSignUp={() => setLocation("/sign-up")} dataOpen={dataMenuOpen} inspectorOpen={inspectorOpen} />
     <div className="flex flex-1 flex-col lg:flex-row">
-      <div id="dataset-rail"><DatasetRail templates={datasetTemplates} activeId={template.id} onSelect={loadTemplate} onImport={() => openImport()} onPaste={() => openImport("paste")} onReset={reset} collapsed={!dataMenuOpen} onToggle={() => setDataMenuOpen((open) => !open)} gallery={gallery} galleryLoading={galleryLoading} activeGalleryId={currentChartId} onSelectGallery={loadGalleryItem} onDeleteGallery={deleteGalleryItem} canDeleteGallery={ownsGalleryItem} /></div>
+      <div id="dataset-rail"><DatasetRail onImport={() => openImport()} onPaste={() => openImport("paste")} collapsed={!dataMenuOpen} onToggle={() => setDataMenuOpen((open) => !open)} gallery={gallery} galleryLoading={galleryLoading} activeGalleryId={currentChartId} onSelectGallery={loadGalleryItem} onDeleteGallery={deleteGalleryItem} canDeleteGallery={ownsGalleryItem} onVoteGallery={voteGalleryItem} myGalleryVote={myGalleryVote} /></div>
       <main className="min-w-0 flex-1 px-4 py-5 sm:px-7 sm:py-7">
         <div className="mx-auto max-w-[1160px]">
           <div className="fade-up mb-5 flex flex-wrap items-end justify-between gap-4">

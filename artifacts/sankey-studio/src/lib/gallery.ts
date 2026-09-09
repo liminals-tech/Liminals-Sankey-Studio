@@ -22,6 +22,8 @@ export type GalleryItem = {
   nodeImageColumn?: string;
   nodeAssets: Record<string, string>;
   createdAt: string;
+  upvotes: number;
+  downvotes: number;
 };
 
 export function createChartId() {
@@ -69,6 +71,36 @@ export function ownsGalleryItem(chartId: string): boolean {
   return chartId in readOwnedCharts();
 }
 
+const VOTER_ID_KEY = "sankey-studio-voter-id";
+const MY_VOTES_KEY = "sankey-studio-my-votes";
+
+function getVoterId(): string {
+  if (typeof window === "undefined") return crypto.randomUUID();
+  try {
+    const existing = window.localStorage.getItem(VOTER_ID_KEY);
+    if (existing) return existing;
+    const created = crypto.randomUUID();
+    window.localStorage.setItem(VOTER_ID_KEY, created);
+    return created;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
+function readMyVotes(): Record<string, 1 | -1> {
+  if (typeof window === "undefined") return {};
+  try {
+    const value: unknown = JSON.parse(window.localStorage.getItem(MY_VOTES_KEY) ?? "{}");
+    return value && typeof value === "object" ? (value as Record<string, 1 | -1>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function myGalleryVote(chartId: string): 1 | -1 | 0 {
+  return readMyVotes()[chartId] ?? 0;
+}
+
 type GalleryRow = {
   chart_id: string;
   title: string;
@@ -90,6 +122,8 @@ type GalleryRow = {
   node_image_column: string | null;
   node_assets: Record<string, string>;
   created_at: string;
+  upvotes?: number;
+  downvotes?: number;
 };
 
 function fromRow(row: GalleryRow): GalleryItem {
@@ -114,13 +148,16 @@ function fromRow(row: GalleryRow): GalleryItem {
     nodeImageColumn: row.node_image_column ?? undefined,
     nodeAssets: row.node_assets ?? {},
     createdAt: row.created_at,
+    upvotes: row.upvotes ?? 0,
+    downvotes: row.downvotes ?? 0,
   };
 }
 
 export async function fetchGallery(): Promise<GalleryItem[]> {
   const { data, error } = await supabase
-    .from("gallery_items")
+    .from("gallery_items_public")
     .select("*")
+    .order("score", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(40);
   if (error || !data) return [];
@@ -129,7 +166,7 @@ export async function fetchGallery(): Promise<GalleryItem[]> {
 
 export type SaveGalleryResult = { ok: true; item: GalleryItem } | { ok: false; reason: "too_large" | "network" };
 
-export async function createGalleryItem(item: Omit<GalleryItem, "createdAt">): Promise<SaveGalleryResult> {
+export async function createGalleryItem(item: Omit<GalleryItem, "createdAt" | "upvotes" | "downvotes">): Promise<SaveGalleryResult> {
   const ownerSecret = crypto.randomUUID();
   const { data, error } = await supabase.rpc("create_gallery_item", {
     payload: {
@@ -173,4 +210,28 @@ export async function deleteGalleryItem(chartId: string): Promise<boolean> {
   if (error || !data) return false;
   forgetOwnedChart(chartId);
   return true;
+}
+
+export type VoteResult = { ok: true; upvotes: number; downvotes: number; myVote: 1 | -1 | 0 } | { ok: false };
+
+export async function voteOnGalleryItem(chartId: string, vote: 1 | -1): Promise<VoteResult> {
+  const voterId = getVoterId();
+  const { data, error } = await supabase.rpc("vote_gallery_item", {
+    p_chart_id: chartId,
+    p_voter_id: voterId,
+    p_vote: vote,
+  });
+  if (error || !data || !Array.isArray(data) || data.length === 0) return { ok: false };
+
+  const current = readMyVotes();
+  const wasSameVote = current[chartId] === vote;
+  if (wasSameVote) delete current[chartId]; else current[chartId] = vote;
+  try {
+    window.localStorage.setItem(MY_VOTES_KEY, JSON.stringify(current));
+  } catch {
+    // Vote still recorded server-side; only the local "you voted" highlight is affected.
+  }
+
+  const row = data[0] as { upvotes: number; downvotes: number };
+  return { ok: true, upvotes: row.upvotes, downvotes: row.downvotes, myVote: wasSameVote ? 0 : vote };
 }
