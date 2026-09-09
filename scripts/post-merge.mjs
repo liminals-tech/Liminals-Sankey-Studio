@@ -28,4 +28,3 @@ function runPnpm(args) {
 }
 
 await runPnpm(["install", "--frozen-lockfile"]);
-await runPnpm(["--filter", "db", "push"]);
