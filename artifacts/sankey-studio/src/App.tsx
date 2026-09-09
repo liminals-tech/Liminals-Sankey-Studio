@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ClerkProvider, SignIn, SignUp } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
@@ -10,7 +10,7 @@ import NotFound from "@/pages/not-found";
 import { Route, Switch, useLocation, Router as WouterRouter } from "wouter";
 import { datasetTemplates, defaultTemplate, type DatasetTemplate, type Row } from "@/data/templates";
 import { parseDelimited, type ImportSummary } from "@/lib/data";
-import { createChartId, readGallery, upsertGalleryItem, writeGallery, type GalleryItem } from "@/lib/gallery";
+import { createChartId, createGalleryItem, deleteGalleryItem as deleteGalleryItemRemote, fetchGallery, ownsGalleryItem, type GalleryItem } from "@/lib/gallery";
 import { buildSankeyModel } from "@/lib/sankey";
 import { DataPreview } from "@/components/studio/DataPreview";
 import { DatasetRail } from "@/components/studio/DatasetRail";
@@ -113,7 +113,8 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
   const [layoutKey, setLayoutKey] = useState(0);
   const [dataMenuOpen, setDataMenuOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(true);
-  const [gallery, setGallery] = useState<GalleryItem[]>(() => readGallery());
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [galleryLoading, setGalleryLoading] = useState(true);
   const [currentChartId, setCurrentChartId] = useState<string>();
   const [backgroundImage, setBackgroundImage] = useState<string>();
   const [nodeImageColumn, setNodeImageColumn] = useState("");
@@ -122,12 +123,17 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
   const [, setLocation] = useLocation();
 
   const model = useMemo(() => buildSankeyModel(rows, levels, valueColumn, reverse, palette, nodeWidth, nodeImageColumn, nodeAssets), [rows, levels, valueColumn, reverse, palette, nodeWidth, nodeImageColumn, nodeAssets, layoutKey]);
+  useEffect(() => {
+    let active = true;
+    fetchGallery().then((items) => { if (active) { setGallery(items); setGalleryLoading(false); } });
+    return () => { active = false; };
+  }, []);
   const loadTemplate = (next: DatasetTemplate) => {
     setTemplate(next); setRows(next.rows); setColumns(next.columns); setLevels(next.levels); setValueColumn("Value"); setTitle(next.title); setSubtitle(next.description); setSelectedId(null); setImportSummary(undefined); setImportError(""); setCurrentChartId(undefined); setBackgroundImage(undefined); setNodeImageColumn(""); setNodeAssets({}); setGalleryNotice("");
   };
   const loadGalleryItem = (item: GalleryItem) => {
     setTemplate({ id: `gallery-${item.chartId}`, title: item.title, eyebrow: "Saved gallery", description: item.description, columns: item.columns, rows: item.rows, levels: item.levels });
-    setRows(item.rows); setColumns(item.columns); setLevels(item.levels); setValueColumn(item.valueColumn); setReverse(item.reverse); setPalette(item.palette); setBackground(item.background); setTransparent(item.transparent); setShowLabels(item.showLabels); setNotation(item.notation); setLinkOpacity(item.linkOpacity); setNodeWidth(item.nodeWidth); setAspect(item.aspect); setBackgroundImage(item.backgroundImage); setNodeImageColumn(item.nodeImageColumn ?? ""); setNodeAssets(item.nodeAssets ?? {}); setTitle(item.title); setSubtitle(item.description); setSelectedId(null); setImportSummary(undefined); setImportError(""); setCurrentChartId(item.chartId); setGalleryNotice(item.mediaPersisted === false ? "This chart's images were not retained because browser storage was full." : "");
+    setRows(item.rows); setColumns(item.columns); setLevels(item.levels); setValueColumn(item.valueColumn); setReverse(item.reverse); setPalette(item.palette); setBackground(item.background); setTransparent(item.transparent); setShowLabels(item.showLabels); setNotation(item.notation); setLinkOpacity(item.linkOpacity); setNodeWidth(item.nodeWidth); setAspect(item.aspect); setBackgroundImage(item.backgroundImage); setNodeImageColumn(item.nodeImageColumn ?? ""); setNodeAssets(item.nodeAssets ?? {}); setTitle(item.title); setSubtitle(item.description); setSelectedId(null); setImportSummary(undefined); setImportError(""); setCurrentChartId(item.chartId); setGalleryNotice("");
   };
   const reset = () => loadTemplate(defaultTemplate);
   const onImported = (summary: ImportSummary) => {
@@ -144,26 +150,28 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
 
   const openImport = (tab: "file" | "paste" = "file") => { setImportTab(tab); setImportOpen(true); };
   const openExport = () => { setCurrentChartId((id) => id ?? createChartId()); setExportOpen(true); };
-  const saveExportToGallery = (chartId: string) => {
-    const item: GalleryItem = { chartId, title: title || "Untitled story", description: subtitle, columns, rows, levels, valueColumn, reverse, palette, background, transparent, showLabels, notation, linkOpacity, nodeWidth, aspect, backgroundImage, nodeImageColumn, nodeAssets, createdAt: new Date().toISOString() };
-    const result = writeGallery(upsertGalleryItem(gallery, item));
+  const saveExportToGallery = async (chartId: string) => {
+    const item: Omit<GalleryItem, "createdAt"> = { chartId, title: title || "Untitled story", description: subtitle, columns, rows, levels, valueColumn, reverse, palette, background, transparent, showLabels, notation, linkOpacity, nodeWidth, aspect, backgroundImage, nodeImageColumn, nodeAssets };
+    const result = await createGalleryItem(item);
     if (result.ok) {
-      setGallery(result.items);
-      setGalleryNotice(result.mediaDropped ? "Chart saved, but its images were too large for browser storage." : `Saved ${chartId} to your local gallery.`);
+      setGallery((current) => [result.item, ...current.filter((existing) => existing.chartId !== chartId)].slice(0, 40));
+      setGalleryNotice(`Saved ${chartId} to the shared gallery — visible to everyone.`);
+    } else if (result.reason === "too_large") {
+      setGalleryNotice("The export completed, but this chart's images were too large to share (max 2MB).");
     } else {
-      setGalleryNotice("The export completed, but the chart could not be saved to browser storage.");
+      setGalleryNotice("The export completed, but it could not be added to the shared gallery. Check your connection and try again.");
     }
     setCurrentChartId(chartId);
   };
-  const deleteGalleryItem = (chartId: string) => {
-    const result = writeGallery(gallery.filter((item) => item.chartId !== chartId));
-    if (result.ok) setGallery(result.items);
+  const deleteGalleryItem = async (chartId: string) => {
+    const removed = await deleteGalleryItemRemote(chartId);
+    if (removed) setGallery((current) => current.filter((item) => item.chartId !== chartId));
     if (currentChartId === chartId) setCurrentChartId(undefined);
   };
   return <div className="studio-noise flex min-h-[100dvh] flex-col bg-[hsl(var(--background))]">
      <TopBar authEnabled={authEnabled} onImport={() => openImport()} onExport={openExport} onHelp={() => setHelpOpen(true)} onMenu={() => setDataMenuOpen((open) => !open)} onInspector={() => setInspectorOpen((open) => !open)} onSignIn={() => setLocation("/sign-in")} onSignUp={() => setLocation("/sign-up")} dataOpen={dataMenuOpen} inspectorOpen={inspectorOpen} />
     <div className="flex flex-1 flex-col lg:flex-row">
-      <div id="dataset-rail"><DatasetRail templates={datasetTemplates} activeId={template.id} onSelect={loadTemplate} onImport={() => openImport()} onPaste={() => openImport("paste")} onReset={reset} collapsed={!dataMenuOpen} onToggle={() => setDataMenuOpen((open) => !open)} gallery={gallery} activeGalleryId={currentChartId} onSelectGallery={loadGalleryItem} onDeleteGallery={deleteGalleryItem} /></div>
+      <div id="dataset-rail"><DatasetRail templates={datasetTemplates} activeId={template.id} onSelect={loadTemplate} onImport={() => openImport()} onPaste={() => openImport("paste")} onReset={reset} collapsed={!dataMenuOpen} onToggle={() => setDataMenuOpen((open) => !open)} gallery={gallery} galleryLoading={galleryLoading} activeGalleryId={currentChartId} onSelectGallery={loadGalleryItem} onDeleteGallery={deleteGalleryItem} canDeleteGallery={ownsGalleryItem} /></div>
       <main className="min-w-0 flex-1 px-4 py-5 sm:px-7 sm:py-7">
         <div className="mx-auto max-w-[1160px]">
           <div className="fade-up mb-5 flex flex-wrap items-end justify-between gap-4">

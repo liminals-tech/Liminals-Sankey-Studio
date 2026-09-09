@@ -28,10 +28,10 @@ Sankey Studio turns ordinary spreadsheet data into polished Sankey diagrams enti
 ## Architecture decisions
 
 - Uploaded files and pasted data are parsed locally and never sent to a server.
-- Exported chart snapshots are stored in browser localStorage only, with stable chart IDs, optional image data, and per-entry deletion.
 - The editor keeps parsing, normalization, model generation, layout, rendering and export separate; animated GIF frames are rendered locally from the same SVG model.
 - Clerk authentication is optional: the editor remains public, while sign-in and account creation use Clerk's client components and session handling.
 - There is no backend API service; the browser talks directly to Clerk's Frontend API when a publishable key is configured.
+- Exporting a chart adds it to a **public, shared gallery** (Supabase Postgres) that every visitor can browse and reuse as a starting point — this is a deliberate, scoped exception to the "no databases" rule below. Access is anonymous: no login is required to add or browse, and only the browser that created an item can delete it (a random per-item secret kept in that browser's localStorage; enforced by two `SECURITY DEFINER` Postgres functions, since there's no auth to hang row-level security off). No moderation, reporting, or rate-limiting exists beyond a per-item size cap.
 - Example datasets are editable starting points, not locked formats.
 
 ## Product
@@ -41,7 +41,7 @@ Users can load a sample or import spreadsheet-style data, map columns or hierarc
 ## User preferences
 
 - Keep the core experience focused on spreadsheet → Sankey → publishable visual.
-- Do not add AI, databases, payments, cloud storage, collaboration or MP4/video timeline editing to the MVP.
+- Do not add AI, payments, collaboration or MP4/video timeline editing to the MVP. Supabase is the one deliberate exception to "no databases," added specifically to back the public gallery — don't expand its use beyond that without the same explicit sign-off.
 
 ## Gotchas
 

@@ -12,12 +12,14 @@ type Props = {
   collapsed: boolean;
   onToggle: () => void;
   gallery: GalleryItem[];
+  galleryLoading: boolean;
   activeGalleryId?: string;
   onSelectGallery: (item: GalleryItem) => void;
   onDeleteGallery: (chartId: string) => void;
+  canDeleteGallery: (chartId: string) => boolean;
 };
 
-export function DatasetRail({ templates, activeId, onSelect, onImport, onPaste, onReset, collapsed, onToggle, gallery, activeGalleryId, onSelectGallery, onDeleteGallery }: Props) {
+export function DatasetRail({ templates, activeId, onSelect, onImport, onPaste, onReset, collapsed, onToggle, gallery, galleryLoading, activeGalleryId, onSelectGallery, onDeleteGallery, canDeleteGallery }: Props) {
   if (collapsed) {
     return (
       <aside className="flex w-full shrink-0 items-center justify-between border-b border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar))] px-3 py-2 text-[hsl(var(--sidebar-foreground))] lg:w-[52px] lg:flex-col lg:justify-start lg:px-2 lg:py-4" aria-label="Collapsed examples menu">
@@ -57,14 +59,14 @@ export function DatasetRail({ templates, activeId, onSelect, onImport, onPaste, 
         })}
       </nav>
       <div className="border-t border-[hsl(var(--sidebar-border))] px-3 py-4">
-        <div className="mb-2 flex items-center gap-2 px-2 text-[10px] font-medium uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.56)]"><GalleryHorizontalEnd size={12} /> Gallery <span className="font-mono text-[9px]">({gallery.length})</span></div>
-        {gallery.length === 0 ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.42)]">Export a chart to save it here and reuse it later.</p> : <div className="space-y-1.5">
+        <div className="mb-2 flex items-center gap-2 px-2 text-[10px] font-medium uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.56)]"><GalleryHorizontalEnd size={12} /> Shared gallery <span className="font-mono text-[9px]">({gallery.length})</span></div>
+        {galleryLoading ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.42)]">Loading the shared gallery…</p> : gallery.length === 0 ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.42)]">Export a chart to add it here for everyone to see and reuse.</p> : <div className="space-y-1.5">
           {gallery.map((item) => <div key={item.chartId} className={`group flex items-center gap-1 rounded-lg transition ${activeGalleryId === item.chartId ? "bg-[hsl(var(--sidebar-accent))]" : "hover:bg-[hsl(var(--sidebar-accent)/.68)]"}`}>
             <button onClick={() => onSelectGallery(item)} className="min-w-0 flex-1 px-3 py-2.5 text-left" data-testid={`button-gallery-${item.chartId}`}>
               <span className="block truncate text-[12px] font-medium text-[hsl(var(--sidebar-foreground)/.8)]">{item.title || "Untitled story"}</span>
               <span className="mt-1 block truncate font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.42)]">{item.chartId}</span>
             </button>
-            <button onClick={(event) => { event.stopPropagation(); onDeleteGallery(item.chartId); }} className="mr-2 grid size-7 shrink-0 place-items-center rounded text-[hsl(var(--sidebar-foreground)/.4)] opacity-0 transition hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))] group-hover:opacity-100 focus:opacity-100" aria-label={`Delete ${item.title || "saved chart"}`} data-testid={`button-delete-gallery-${item.chartId}`}><Trash2 size={12} /></button>
+            {canDeleteGallery(item.chartId) && <button onClick={(event) => { event.stopPropagation(); onDeleteGallery(item.chartId); }} className="mr-2 grid size-7 shrink-0 place-items-center rounded text-[hsl(var(--sidebar-foreground)/.4)] opacity-0 transition hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))] group-hover:opacity-100 focus:opacity-100" aria-label={`Delete ${item.title || "saved chart"}`} data-testid={`button-delete-gallery-${item.chartId}`}><Trash2 size={12} /></button>}
           </div>)}
         </div>}
       </div>

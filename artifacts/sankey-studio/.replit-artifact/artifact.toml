@@ -26,3 +26,5 @@ to = "/index.html"
 [services.env]
 PORT = "23598"
 BASE_PATH = "/"
+VITE_SUPABASE_URL = "https://rtxvzcjfknjmbuytifcz.supabase.co"
+VITE_SUPABASE_ANON_KEY = "sb_publishable_e10bLKJSI9xSRhftoyRDmg_m61U0BsI"
