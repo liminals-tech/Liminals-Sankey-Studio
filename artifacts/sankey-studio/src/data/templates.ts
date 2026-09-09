@@ -142,6 +142,38 @@ export const datasetTemplates: DatasetTemplate[] = [
     ],
     levels: ["Source", "Stage 1", "Stage 2"],
   },
+  {
+    id: "funnel",
+    title: "Where do visitors convert?",
+    eyebrow: "Marketing / Funnel",
+    description: "The simplest read: one step, three outcomes.",
+    columns: ["Source", "Target", "Value"],
+    rows: [
+      { Source: "Landing page", Target: "Signed up", Value: 410 },
+      { Source: "Landing page", Target: "Added to cart", Value: 260 },
+      { Source: "Landing page", Target: "Bounced", Value: 330 },
+    ],
+    levels: ["Source", "Target"],
+  },
+  {
+    id: "hiring",
+    title: "How does a candidate become a hire?",
+    eyebrow: "People / Hiring funnel",
+    description: "Four steps from first contact to offer, and where most candidates leave.",
+    columns: ["Source", "Stage 1", "Stage 2", "Stage 3", "Value"],
+    rows: [
+      { Source: "Referral", "Stage 1": "Passed screen", "Stage 2": "Interviewed", "Stage 3": "Hired", Value: 14 },
+      { Source: "Referral", "Stage 1": "Passed screen", "Stage 2": "Interviewed", "Stage 3": "Rejected", Value: 6 },
+      { Source: "Referral", "Stage 1": "Rejected at screen", "Stage 2": "Rejected at screen", "Stage 3": "Rejected at screen", Value: 5 },
+      { Source: "Job board", "Stage 1": "Passed screen", "Stage 2": "Interviewed", "Stage 3": "Hired", Value: 9 },
+      { Source: "Job board", "Stage 1": "Passed screen", "Stage 2": "Interviewed", "Stage 3": "Rejected", Value: 11 },
+      { Source: "Job board", "Stage 1": "Rejected at screen", "Stage 2": "Rejected at screen", "Stage 3": "Rejected at screen", Value: 20 },
+      { Source: "Outbound", "Stage 1": "Passed screen", "Stage 2": "Interviewed", "Stage 3": "Hired", Value: 5 },
+      { Source: "Outbound", "Stage 1": "Passed screen", "Stage 2": "Interviewed", "Stage 3": "Rejected", Value: 9 },
+      { Source: "Outbound", "Stage 1": "Rejected at screen", "Stage 2": "Rejected at screen", "Stage 3": "Rejected at screen", Value: 16 },
+    ],
+    levels: ["Source", "Stage 1", "Stage 2", "Stage 3"],
+  },
 ];
 
 export const defaultTemplate = datasetTemplates[0];
