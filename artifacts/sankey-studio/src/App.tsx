@@ -111,7 +111,7 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
   const [importSummary, setImportSummary] = useState<ImportSummary>();
   const [importError, setImportError] = useState("");
   const [layoutKey, setLayoutKey] = useState(0);
-  const [dataMenuOpen, setDataMenuOpen] = useState(true);
+  const [dataMenuOpen, setDataMenuOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [gallery, setGallery] = useState<GalleryItem[]>(() => readGallery());
   const [currentChartId, setCurrentChartId] = useState<string>();
