@@ -164,6 +164,16 @@ export async function fetchGallery(): Promise<GalleryItem[]> {
   return (data as GalleryRow[]).map(fromRow);
 }
 
+export async function fetchGalleryItem(chartId: string): Promise<GalleryItem | null> {
+  const { data, error } = await supabase
+    .from("gallery_items_public")
+    .select("*")
+    .eq("chart_id", chartId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return fromRow(data as GalleryRow);
+}
+
 export type SaveGalleryResult = { ok: true; item: GalleryItem } | { ok: false; reason: "too_large" | "network" };
 
 export async function createGalleryItem(item: Omit<GalleryItem, "createdAt" | "upvotes" | "downvotes">): Promise<SaveGalleryResult> {

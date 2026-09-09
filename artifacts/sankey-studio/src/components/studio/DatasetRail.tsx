@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Database, FileUp, GalleryHorizontalEnd, Minus, Plus, Table2, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Database, FileUp, GalleryHorizontalEnd, Link2, Minus, Plus, Table2, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import type { GalleryItem } from "@/lib/gallery";
 import { modelToSvg } from "@/lib/export";
@@ -11,6 +11,11 @@ function sampleFlowPath(item: GalleryItem): string {
   const row = item.rows[0];
   if (!row) return "";
   return item.levels.map((level) => String(row[level] ?? "")).filter(Boolean).join(" → ");
+}
+
+function galleryItemPermalink(chartId: string): string {
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+  return `${window.location.origin}${basePath}/chart/${encodeURIComponent(chartId)}`;
 }
 
 function relativeTime(iso: string): string {
@@ -81,6 +86,7 @@ export function DatasetRail({ onImport, onPaste, collapsed, onToggle, gallery, g
                 <button onClick={(event) => { event.stopPropagation(); onVoteGallery(item.chartId, 1); }} aria-label="Upvote this chart" aria-pressed={myVote === 1} className={`grid size-5 place-items-center rounded ${myVote === 1 ? "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-primary))]" : "text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]"}`} data-testid={`button-upvote-${item.chartId}`}><Plus size={10} /></button>
                 <span className="min-w-[14px] text-center font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.55)]" data-testid={`text-score-${item.chartId}`}>{score > 0 ? `+${score}` : score}</span>
                 <button onClick={(event) => { event.stopPropagation(); onVoteGallery(item.chartId, -1); }} aria-label="Downvote this chart" aria-pressed={myVote === -1} className={`grid size-5 place-items-center rounded ${myVote === -1 ? "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-foreground))]" : "text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]"}`} data-testid={`button-downvote-${item.chartId}`}><Minus size={10} /></button>
+                <a href={galleryItemPermalink(item.chartId)} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} aria-label="Open a shareable link to this chart" title="Open a shareable link to this chart" className="ml-1 grid size-5 place-items-center rounded text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]" data-testid={`link-permalink-${item.chartId}`}><Link2 size={10} /></a>
               </div>
             </div>
             {canDeleteGallery(item.chartId) && <button onClick={(event) => { event.stopPropagation(); onDeleteGallery(item.chartId); }} className="grid size-7 shrink-0 place-items-center rounded text-[hsl(var(--sidebar-foreground)/.4)] opacity-0 transition hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))] group-hover:opacity-100 focus:opacity-100" aria-label={`Delete ${item.title || "saved chart"}`} data-testid={`button-delete-gallery-${item.chartId}`}><Trash2 size={12} /></button>}

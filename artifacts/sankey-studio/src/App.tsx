@@ -7,10 +7,11 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
+import ChartViewPage from "@/pages/chart-view";
 import { Route, Switch, useLocation, Router as WouterRouter } from "wouter";
 import { defaultTemplate, type Row } from "@/data/templates";
 import { parseDelimited, type ImportSummary } from "@/lib/data";
-import { createChartId, createGalleryItem, deleteGalleryItem as deleteGalleryItemRemote, fetchGallery, myGalleryVote, ownsGalleryItem, voteOnGalleryItem, type GalleryItem } from "@/lib/gallery";
+import { createChartId, createGalleryItem, deleteGalleryItem as deleteGalleryItemRemote, fetchGallery, fetchGalleryItem, myGalleryVote, ownsGalleryItem, voteOnGalleryItem, type GalleryItem } from "@/lib/gallery";
 import { buildSankeyModel } from "@/lib/sankey";
 import { DataPreview } from "@/components/studio/DataPreview";
 import { DatasetRail } from "@/components/studio/DatasetRail";
@@ -125,6 +126,13 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
   useEffect(() => {
     let active = true;
     fetchGallery().then((items) => { if (active) { setGallery(items); setGalleryLoading(false); } });
+    const chartToLoad = new URLSearchParams(window.location.search).get("chart");
+    if (chartToLoad) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("chart");
+      window.history.replaceState({}, "", url);
+      fetchGalleryItem(chartToLoad).then((item) => { if (active && item) loadGalleryItem(item); });
+    }
     return () => { active = false; };
   }, []);
   const loadGalleryItem = (item: GalleryItem) => {
@@ -203,7 +211,7 @@ function SignUpPage() {
 }
 
 function Router({ authEnabled }: { authEnabled: boolean }) {
-  return <Switch><Route path="/" component={() => <Studio authEnabled={authEnabled} />} />{authEnabled && <><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /></>}<Route component={NotFound} /></Switch>;
+  return <Switch><Route path="/" component={() => <Studio authEnabled={authEnabled} />} /><Route path="/chart/:chartId" component={ChartViewPage} />{authEnabled && <><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /></>}<Route component={NotFound} /></Switch>;
 }
 
 function RoutedErrorBoundary({ children }: { children: ReactNode }) {
