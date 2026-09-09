@@ -36,7 +36,7 @@ export function SankeyCanvas({ model, title, subtitle, background, backgroundIma
     canvasRef.current?.scrollTo({ left: 0, top: 0, behavior: "auto" });
   };
   return (
-    <section className="min-h-[430px] flex-1 overflow-hidden rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-[var(--shadow-sm)]" data-testid="panel-sankey-visualization">
+    <section className="flex min-h-[430px] flex-1 flex-col overflow-hidden rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-[var(--shadow-sm)]" data-testid="panel-sankey-visualization">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[hsl(var(--border))] px-5 py-4 sm:px-7">
         <div><div className="flex items-center gap-2"><span className="size-2 rounded-full bg-[hsl(var(--chart-2))]" /><span className="font-mono text-[10px] uppercase tracking-[.17em] text-[hsl(var(--muted-foreground))]">Live preview</span></div><h1 className="mt-1 font-serif text-[clamp(1.45rem,2vw,2.1rem)] leading-tight tracking-[-.02em]" data-testid="text-chart-title">{title}</h1><p className="mt-1 max-w-xl text-xs text-[hsl(var(--muted-foreground))]" data-testid="text-chart-subtitle">{subtitle}</p><div className="mt-3 flex items-end gap-2.5"><div><p className="font-mono text-[9px] uppercase tracking-[.16em] text-[hsl(var(--muted-foreground))]">{totalLabel}</p><p className="font-serif text-2xl leading-none tracking-[-.03em]" data-testid="text-chart-total">{totalDisplay}</p></div><span className="pb-0.5 text-[10px] text-[hsl(var(--muted-foreground))]">sum of the mapped value column</span></div></div>
         <div className="flex items-center gap-1 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background)/.6)] p-1">
@@ -45,7 +45,7 @@ export function SankeyCanvas({ model, title, subtitle, background, backgroundIma
           <button onClick={onResetLayout} className="ml-1 grid size-7 place-items-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]" aria-label="Reset layout" data-testid="button-reset-layout"><RotateCcw size={13} /></button>
         </div>
       </div>
-      <div ref={canvasRef} className="studio-grid relative min-h-[355px] overflow-auto p-3 sm:p-5" style={{ backgroundColor: transparent ? "transparent" : background }}>
+      <div ref={canvasRef} className="studio-grid relative min-h-[355px] flex-1 overflow-auto p-3 sm:p-5" style={{ backgroundColor: transparent ? "transparent" : background }}>
         {model.nodes.length < 2 ? <div className="grid min-h-[330px] place-items-center text-center"><div><p className="font-serif text-xl">Nothing to draw yet.</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Map at least two text columns and a numeric value.</p></div></div> : <svg viewBox="0 0 1220 560" className="sankey-animate mx-auto block h-auto min-w-0 transition-transform duration-200" style={{ width: `${zoom * 100}%`, minWidth: `${Math.round(900 * zoom)}px` }} role="img" aria-label={`Sankey diagram: ${title}`} data-testid="svg-sankey">
           <rect x="0" y="0" width="1220" height="560" fill="transparent" onClick={() => onSelect(null)} />
           {backgroundImage && <image href={backgroundImage} x="0" y="0" width="1220" height="560" preserveAspectRatio="xMidYMid slice" opacity=".16" pointerEvents="none" aria-label="Chart background image"><title>Chart background image</title></image>}
