@@ -16,7 +16,7 @@ External APIs: NO
 
 Personal data: NO
 User uploads: YES — processed ephemerally in the browser
-Public user content: YES — exported charts (data, styling, optional embedded images) are stored in a shared Postgres database and publicly visible/reusable by anyone; not pre-moderated or rate-limited beyond a per-item size cap. Any visitor can report a chart for manual review (recorded server-side, not auto-hidden — an anonymous report count is too easy to game into censoring legitimate content). Signed-in users (Clerk) can opt a chart out of this into a private row instead, scoped by a Postgres-verified Clerk identity and never exposed to the public gallery, its view, or its CDN embed snapshots.
+Public user content: YES — exported charts (data, styling, optional embedded images) are stored in a shared Postgres database and publicly visible/reusable by anyone; not pre-moderated, capped per-item at 2MB, and rate-limited to 40 database writes per 5 minutes per IP (export, vote, delete, report combined). Any visitor can report a chart for manual review (recorded server-side, not auto-hidden — an anonymous report count is too easy to game into censoring legitimate content). Signed-in users (Clerk) can opt a chart out of this into a private row instead, scoped by a Postgres-verified Clerk identity and never exposed to the public gallery, its view, or its CDN embed snapshots.
 Marketing email: NO
 Targeted at minors: NO
 Browser-persisted chart data: YES — a per-item secret is kept in the creator's browser so only they can delete that item from the public gallery later
