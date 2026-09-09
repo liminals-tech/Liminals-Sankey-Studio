@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import ChartViewPage from "@/pages/chart-view";
+import { PrivacyPage, TermsPage } from "@/pages/legal";
 import { Route, Switch, useLocation, Router as WouterRouter } from "wouter";
 import { defaultTemplate, type Row } from "@/data/templates";
 import { parseDelimited, type ImportSummary } from "@/lib/data";
@@ -228,6 +229,7 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
             <div><label htmlFor="chart-title" className="mb-1 block text-[10px] font-medium uppercase tracking-[.14em] text-[hsl(var(--muted-foreground))]">Title</label><input id="chart-title" value={title} onChange={(event) => setTitle(event.target.value)} className="w-full border-0 bg-transparent px-0 text-sm font-semibold outline-none placeholder:text-[hsl(var(--muted-foreground))]" data-testid="input-chart-title" /></div>
             <div><label htmlFor="chart-subtitle" className="mb-1 block text-[10px] font-medium uppercase tracking-[.14em] text-[hsl(var(--muted-foreground))]">Subtitle / source note</label><input id="chart-subtitle" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} className="w-full border-0 bg-transparent px-0 text-xs text-[hsl(var(--muted-foreground))] outline-none placeholder:text-[hsl(var(--muted-foreground))]" data-testid="input-chart-subtitle" /></div>
           </div>
+          <div className="mt-8 flex gap-3 text-[10px] text-[hsl(var(--muted-foreground)/.7)]"><button onClick={() => setLocation("/privacy")} className="hover:underline" data-testid="link-privacy">Privacy</button><span>·</span><button onClick={() => setLocation("/terms")} className="hover:underline" data-testid="link-terms">Terms</button></div>
         </div>
       </main>
       <Inspector columns={columns} levels={levels} valueColumn={valueColumn} reverse={reverse} setLevels={setLevels} setValueColumn={setValueColumn} setReverse={setReverse} palette={palette} setPalette={setPalette} background={background} setBackground={setBackground} backgroundImage={backgroundImage} setBackgroundImage={setBackgroundImage} transparent={transparent} setTransparent={setTransparent} showLabels={showLabels} setShowLabels={setShowLabels} notation={notation} setNotation={setNotation} imageColumns={columns.filter((column) => column !== valueColumn)} imageColumn={nodeImageColumn} setImageColumn={setNodeImageColumn} nodes={model.nodes.map(({ id, label, level }) => ({ id, label, level }))} nodeAssets={nodeAssets} setNodeAsset={(id, image) => setNodeAssets((assets) => ({ ...assets, [id]: image }))} clearNodeAsset={(id) => setNodeAssets((assets) => { const next = { ...assets }; delete next[id]; return next; })} linkOpacity={linkOpacity} setLinkOpacity={setLinkOpacity} nodeWidth={nodeWidth} setNodeWidth={setNodeWidth} aspect={aspect} setAspect={setAspect} collapsed={!inspectorOpen} onToggle={() => setInspectorOpen((open) => !open)} />
@@ -247,7 +249,7 @@ function SignUpPage() {
 }
 
 function Router({ authEnabled }: { authEnabled: boolean }) {
-  return <Switch><Route path="/" component={() => <Studio authEnabled={authEnabled} />} /><Route path="/chart/:chartId" component={ChartViewPage} />{authEnabled && <><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /></>}<Route component={NotFound} /></Switch>;
+  return <Switch><Route path="/" component={() => <Studio authEnabled={authEnabled} />} /><Route path="/chart/:chartId" component={ChartViewPage} /><Route path="/privacy" component={PrivacyPage} /><Route path="/terms" component={TermsPage} />{authEnabled && <><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /></>}<Route component={NotFound} /></Switch>;
 }
 
 function RoutedErrorBoundary({ children }: { children: ReactNode }) {

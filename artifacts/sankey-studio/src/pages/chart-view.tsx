@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Check, Code2, Lock, Minus, Plus } from "lucide-react";
+import { Check, Code2, Flag, Lock, Minus, Plus } from "lucide-react";
 import { useLocation } from "wouter";
 import { BrandMark } from "@/components/studio/BrandMark";
+import { ReportDialog } from "@/components/studio/ReportDialog";
 import { SankeyCanvas } from "@/components/studio/SankeyCanvas";
-import { fetchGalleryItem, galleryEmbedUrl, myGalleryVote, voteOnGalleryItem, type GalleryItem } from "@/lib/gallery";
+import { fetchGalleryItem, galleryEmbedUrl, hasReportedGalleryItem, myGalleryVote, voteOnGalleryItem, type GalleryItem } from "@/lib/gallery";
 import { buildSankeyModel } from "@/lib/sankey";
 
 type LoadState = { status: "loading" } | { status: "not-found" } | { status: "ready"; item: GalleryItem };
@@ -14,6 +15,7 @@ export default function ChartViewPage({ params }: { params: { chartId: string } 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [layoutKey, setLayoutKey] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -70,11 +72,14 @@ export default function ChartViewPage({ params }: { params: { chartId: string } 
                   <button onClick={() => vote(item, -1)} aria-label="Downvote this chart" aria-pressed={myVote === -1} className={`grid size-7 place-items-center rounded ${myVote === -1 ? "bg-[hsl(var(--secondary))] text-[hsl(var(--foreground))]" : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]"}`} data-testid="button-view-downvote"><Minus size={13} /></button>
                 </div>
                 {!item.isPrivate && <button onClick={() => copyEmbedCode(item)} className="flex items-center gap-1.5 rounded-md border border-[hsl(var(--border))] px-3.5 py-2 text-xs font-semibold text-[hsl(var(--foreground))] transition hover:bg-[hsl(var(--muted))]" data-testid="button-copy-embed">{copied ? <Check size={14} /> : <Code2 size={14} />} {copied ? "Copied" : "Copy embed code"}</button>}
+                {!item.isPrivate && !hasReportedGalleryItem(item.chartId) && <button onClick={() => setReporting(true)} aria-label="Report this chart" title="Report this chart" className="grid size-9 place-items-center rounded-md border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] transition hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]" data-testid="button-report-chart"><Flag size={14} /></button>}
                 <button onClick={() => setLocation(`/?chart=${encodeURIComponent(item.chartId)}`)} className="rounded-md bg-[hsl(var(--primary))] px-3.5 py-2 text-xs font-semibold text-[hsl(var(--primary-foreground))] shadow-sm transition hover:brightness-95" data-testid="button-use-as-starting-point">Use as a starting point</button>
               </div>
             </div>
             <SankeyCanvas model={model} title={item.title || "Untitled story"} subtitle={item.description} background={item.background} backgroundImage={item.backgroundImage} transparent={item.transparent} showLabels={item.showLabels} notation={item.notation} linkOpacity={item.linkOpacity} selectedId={selectedId} onSelect={(id) => setSelectedId(id)} onResetLayout={() => { setSelectedId(null); setLayoutKey((key) => key + 1); }} />
             <p className="mt-3 text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">{item.isPrivate ? "Only you can view this chart, verified by your signed-in session — it never appears in the shared gallery and has no public embed snapshot." : "Anyone with this link can view and vote on this chart. Every calculation stays on your device — nothing about how you view this page is sent anywhere beyond the vote you cast. The embed code points at a static snapshot taken when this chart was shared, so it stays put even if the chart is later changed."}</p>
+            {reporting && <ReportDialog chartId={item.chartId} title={item.title} onClose={() => setReporting(false)} onReported={() => setReporting(false)} />}
+            <div className="mt-6 flex gap-3 text-[10px] text-[hsl(var(--muted-foreground)/.7)]"><button onClick={() => setLocation("/privacy")} className="hover:underline">Privacy</button><span>·</span><button onClick={() => setLocation("/terms")} className="hover:underline">Terms</button></div>
           </>;
         })()}
       </main>

@@ -1,8 +1,9 @@
-import { ChevronLeft, ChevronRight, Database, FileUp, GalleryHorizontalEnd, Link2, Lock, Minus, Plus, Table2, Trash2, UserRound } from "lucide-react";
-import { useMemo } from "react";
-import type { GalleryItem } from "@/lib/gallery";
+import { ChevronLeft, ChevronRight, Database, FileUp, Flag, GalleryHorizontalEnd, Link2, Lock, Minus, Plus, Table2, Trash2, UserRound } from "lucide-react";
+import { useState, useMemo } from "react";
+import { hasReportedGalleryItem, type GalleryItem } from "@/lib/gallery";
 import { modelToSvg } from "@/lib/export";
 import { buildSankeyModel } from "@/lib/sankey";
+import { ReportDialog } from "@/components/studio/ReportDialog";
 
 // One real row's values across every level, e.g. "Revenue → Gross margin →
 // People" — a quick, concrete sense of what kind of data this chart holds,
@@ -41,7 +42,7 @@ function GalleryThumbnail({ item }: { item: GalleryItem }) {
 
 // Shared per-item row for both the shared gallery and "My charts": thumbnail,
 // sample flow path, title, votes, permalink and an optional delete button.
-function GalleryItemRow({ item, active, onSelect, onDelete, canDelete, onVote, myVote }: {
+function GalleryItemRow({ item, active, onSelect, onDelete, canDelete, onVote, myVote, onReport }: {
   item: GalleryItem;
   active: boolean;
   onSelect: (item: GalleryItem) => void;
@@ -49,8 +50,10 @@ function GalleryItemRow({ item, active, onSelect, onDelete, canDelete, onVote, m
   canDelete: boolean;
   onVote: (chartId: string, vote: 1 | -1) => void;
   myVote: 1 | -1 | 0;
+  onReport?: (item: GalleryItem) => void;
 }) {
   const score = item.upvotes - item.downvotes;
+  const reported = onReport ? hasReportedGalleryItem(item.chartId) : false;
   return (
     <div className={`group flex items-start gap-2 rounded-lg p-2 transition ${active ? "bg-[hsl(var(--sidebar-accent))]" : "hover:bg-[hsl(var(--sidebar-accent)/.68)]"}`}>
       <GalleryThumbnail item={item} />
@@ -65,6 +68,7 @@ function GalleryItemRow({ item, active, onSelect, onDelete, canDelete, onVote, m
           <span className="min-w-[14px] text-center font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.55)]" data-testid={`text-score-${item.chartId}`}>{score > 0 ? `+${score}` : score}</span>
           <button onClick={(event) => { event.stopPropagation(); onVote(item.chartId, -1); }} aria-label="Downvote this chart" aria-pressed={myVote === -1} className={`grid size-5 place-items-center rounded ${myVote === -1 ? "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-foreground))]" : "text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]"}`} data-testid={`button-downvote-${item.chartId}`}><Minus size={10} /></button>
           {!item.isPrivate && <a href={galleryItemPermalink(item.chartId)} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} aria-label="Open a shareable link to this chart" title="Open a shareable link to this chart" className="ml-1 grid size-5 place-items-center rounded text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]" data-testid={`link-permalink-${item.chartId}`}><Link2 size={10} /></a>}
+          {onReport && !reported && <button onClick={(event) => { event.stopPropagation(); onReport(item); }} aria-label="Report this chart" title="Report this chart" className="grid size-5 place-items-center rounded text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]" data-testid={`button-report-${item.chartId}`}><Flag size={10} /></button>}
         </div>
       </div>
       {canDelete && <button onClick={(event) => { event.stopPropagation(); onDelete(item.chartId); }} className="grid size-7 shrink-0 place-items-center rounded text-[hsl(var(--sidebar-foreground)/.4)] opacity-0 transition hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))] group-hover:opacity-100 focus:opacity-100" aria-label={`Delete ${item.title || "saved chart"}`} data-testid={`button-delete-gallery-${item.chartId}`}><Trash2 size={12} /></button>}
@@ -91,6 +95,7 @@ type Props = {
 };
 
 export function DatasetRail({ onImport, onPaste, collapsed, onToggle, gallery, galleryLoading, activeGalleryId, onSelectGallery, onDeleteGallery, canDeleteGallery, onVoteGallery, myGalleryVote, signedIn, myCharts, myChartsLoading }: Props) {
+  const [reportingItem, setReportingItem] = useState<GalleryItem | null>(null);
   if (collapsed) {
     return (
       <aside className="flex w-full shrink-0 items-center justify-between border-b border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar))] px-3 py-2 text-[hsl(var(--sidebar-foreground))] lg:w-[52px] lg:flex-col lg:justify-start lg:px-2 lg:py-4" aria-label="Collapsed gallery menu">
@@ -109,7 +114,7 @@ export function DatasetRail({ onImport, onPaste, collapsed, onToggle, gallery, g
           </button>
         </div>
         {galleryLoading ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.42)]">Loading the shared gallery…</p> : gallery.length === 0 ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.42)]">Export a chart to add it here for everyone to see and reuse.</p> : <div className="space-y-1.5">
-          {gallery.map((item) => <GalleryItemRow key={item.chartId} item={item} active={activeGalleryId === item.chartId} onSelect={onSelectGallery} onDelete={onDeleteGallery} canDelete={canDeleteGallery(item.chartId)} onVote={onVoteGallery} myVote={myGalleryVote(item.chartId)} />)}
+          {gallery.map((item) => <GalleryItemRow key={item.chartId} item={item} active={activeGalleryId === item.chartId} onSelect={onSelectGallery} onDelete={onDeleteGallery} canDelete={canDeleteGallery(item.chartId)} onVote={onVoteGallery} myVote={myGalleryVote(item.chartId)} onReport={canDeleteGallery(item.chartId) ? undefined : setReportingItem} />)}
         </div>}
       </div>
       {signedIn && <div className="border-t border-[hsl(var(--sidebar-border))] px-3 py-4">
@@ -131,6 +136,7 @@ export function DatasetRail({ onImport, onPaste, collapsed, onToggle, gallery, g
         <button onClick={onImport} className="flex items-center gap-1.5 rounded-md border border-[hsl(var(--sidebar-border))] px-3 py-2 text-[11px] text-[hsl(var(--sidebar-foreground)/.72)]" data-testid="button-import-file-mobile"><FileUp size={13} /> Import</button>
         <button onClick={onPaste} className="flex items-center gap-1.5 rounded-md bg-[hsl(var(--sidebar-accent))] px-3 py-2 text-[11px] text-[hsl(var(--sidebar-foreground)/.72)]" data-testid="button-paste-data-mobile"><Table2 size={13} /> Paste</button>
       </div>
+      {reportingItem && <ReportDialog chartId={reportingItem.chartId} title={reportingItem.title} onClose={() => setReportingItem(null)} onReported={() => setReportingItem(null)} />}
     </aside>
   );
 }

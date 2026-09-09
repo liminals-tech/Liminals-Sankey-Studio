@@ -295,3 +295,44 @@ export async function voteOnGalleryItem(chartId: string, vote: 1 | -1): Promise<
   const row = data[0] as { upvotes: number; downvotes: number };
   return { ok: true, upvotes: row.upvotes, downvotes: row.downvotes, myVote: wasSameVote ? 0 : vote };
 }
+
+export type ReportReason = "inappropriate" | "spam" | "personal_data" | "other";
+const MY_REPORTS_KEY = "sankey-studio-my-reports";
+
+function readMyReports(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const value: unknown = JSON.parse(window.localStorage.getItem(MY_REPORTS_KEY) ?? "[]");
+    return Array.isArray(value) ? (value as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function hasReportedGalleryItem(chartId: string): boolean {
+  return readMyReports().includes(chartId);
+}
+
+// Reports aren't reviewed automatically -- there's no admin UI or auto-hide
+// (an anonymous report count is too easy to game into hiding legitimate
+// charts). They land in a table only the project owner can query directly,
+// for manual review and takedown.
+export async function reportGalleryItem(chartId: string, reason: ReportReason, note?: string): Promise<boolean> {
+  const reporterId = getVoterId();
+  const { data, error } = await supabase.rpc("report_gallery_item", {
+    p_chart_id: chartId,
+    p_reporter_id: reporterId,
+    p_reason: reason,
+    p_note: note?.slice(0, 200) || null,
+  });
+  if (error) return false;
+  const reports = readMyReports();
+  if (!reports.includes(chartId)) {
+    try {
+      window.localStorage.setItem(MY_REPORTS_KEY, JSON.stringify([...reports, chartId]));
+    } catch {
+      // Non-critical: the report was still recorded server-side.
+    }
+  }
+  return Boolean(data);
+}

@@ -16,7 +16,7 @@ External APIs: NO
 
 Personal data: NO
 User uploads: YES — processed ephemerally in the browser
-Public user content: YES — exported charts (data, styling, optional embedded images) are stored in a shared Postgres database and publicly visible/reusable by anyone; not moderated or rate-limited beyond a per-item size cap. Signed-in users (Clerk) can opt a chart out of this into a private row instead, scoped by a Postgres-verified Clerk identity and never exposed to the public gallery, its view, or its CDN embed snapshots.
+Public user content: YES — exported charts (data, styling, optional embedded images) are stored in a shared Postgres database and publicly visible/reusable by anyone; not pre-moderated or rate-limited beyond a per-item size cap. Any visitor can report a chart for manual review (recorded server-side, not auto-hidden — an anonymous report count is too easy to game into censoring legitimate content). Signed-in users (Clerk) can opt a chart out of this into a private row instead, scoped by a Postgres-verified Clerk identity and never exposed to the public gallery, its view, or its CDN embed snapshots.
 Marketing email: NO
 Targeted at minors: NO
 Browser-persisted chart data: YES — a per-item secret is kept in the creator's browser so only they can delete that item from the public gallery later
@@ -31,11 +31,11 @@ Subscriptions: NO
 ## Compliance
 
 Analytics consent: NOT REQUIRED
-Privacy Policy: TO REVIEW
+Privacy Policy: DRAFTED — live at /privacy, contact marco@liminals.it; pending a legal review before relying on it for anything beyond MVP
 Cookie & Tracking Policy: NOT REQUIRED
-Terms: TO REVIEW
+Terms: DRAFTED — live at /terms, contact marco@liminals.it; no governing-law/jurisdiction clause has been chosen yet
 Payment terms: NOT REQUIRED
 Data retention: DEFINED — public gallery entries persist indefinitely in the shared database unless deleted by their creator
-Data deletion: DEFINED — a gallery entry can only be deleted by the browser that created it (matched via a locally-held per-item secret, not an account); no admin/moderation deletion path exists yet
+Data deletion: DEFINED — a gallery entry can be deleted by the browser that created it (a locally-held per-item secret) or, if created while signed in, by that verified identity from any device; reported content is reviewed manually by the project owner directly in Supabase, since there is no moderation queue/admin UI
 Accessibility review: TO REVIEW
 Security review: TO REVIEW
