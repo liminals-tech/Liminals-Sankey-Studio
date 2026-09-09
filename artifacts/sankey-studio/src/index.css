@@ -69,7 +69,7 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* LIGHT MODE — Sankey Studio: warm paper, ink, oxidized coral */
+/* LIGHT MODE — Sankey Studio: warm paper, ink, fresh green */
 :root {
   --button-outline: rgba(0, 0, 0, 0.1);
   --badge-outline: rgba(0, 0, 0, 0.05);
@@ -90,16 +90,16 @@
   --sidebar: 192 19% 20%;
   --sidebar-foreground: 42 27% 94%;
   --sidebar-border: 192 14% 29%;
-  --sidebar-primary: 14 82% 64%;
+  --sidebar-primary: 142 42% 47%;
   --sidebar-primary-foreground: 195 15% 18%;
   --sidebar-accent: 192 15% 27%;
   --sidebar-accent-foreground: 42 27% 94%;
-  --sidebar-ring: 14 82% 64%;
+  --sidebar-ring: 142 42% 47%;
   --popover: 42 32% 97%;
   --popover-foreground: 195 15% 18%;
   --popover-border: 38 20% 82%;
-  --primary: 14 82% 64%;
-  --primary-foreground: 195 15% 18%;
+  --primary: 142 42% 47%;
+  --primary-foreground: 42 27% 94%;
   --secondary: 192 22% 87%;
   --secondary-foreground: 195 15% 18%;
   --muted: 39 19% 88%;
@@ -109,8 +109,8 @@
   --destructive: 4 65% 54%;
   --destructive-foreground: 42 27% 94%;
   --input: 38 20% 77%;
-  --ring: 14 82% 64%;
-  --chart-1: 14 82% 64%;
+  --ring: 142 42% 47%;
+  --chart-1: 142 42% 47%;
   --chart-2: 175 56% 42%;
   --chart-3: 47 74% 63%;
   --chart-4: 196 45% 43%;
