@@ -46,6 +46,7 @@ export type GalleryItem = {
   nodeImageColumn?: string;
   nodeAssets: Record<string, string>;
   nodeOrder: Record<number, string[]>;
+  isPrivate: boolean;
   createdAt: string;
   upvotes: number;
   downvotes: number;
@@ -147,6 +148,7 @@ type GalleryRow = {
   node_image_column: string | null;
   node_assets: Record<string, string>;
   node_order?: Record<string, string[]> | null;
+  is_private?: boolean | null;
   created_at: string;
   upvotes?: number;
   downvotes?: number;
@@ -174,6 +176,7 @@ function fromRow(row: GalleryRow): GalleryItem {
     nodeImageColumn: row.node_image_column ?? undefined,
     nodeAssets: row.node_assets ?? {},
     nodeOrder: row.node_order ?? {},
+    isPrivate: row.is_private ?? false,
     createdAt: row.created_at,
     upvotes: row.upvotes ?? 0,
     downvotes: row.downvotes ?? 0,
@@ -197,8 +200,21 @@ export async function fetchGalleryItem(chartId: string): Promise<GalleryItem | n
     .select("*")
     .eq("chart_id", chartId)
     .maybeSingle();
-  if (error || !data) return null;
-  return fromRow(data as GalleryRow);
+  if (!error && data) return fromRow(data as GalleryRow);
+
+  // Not in the public gallery -- could be private. This only ever resolves
+  // for the chart's own signed-in owner (server-checked via the verified
+  // Clerk identity), so a non-owner or anonymous caller sees the same
+  // not-found result as a chart that never existed.
+  const mine = await supabase.rpc("get_my_gallery_item", { p_chart_id: chartId });
+  if (mine.error || !mine.data || !Array.isArray(mine.data) || mine.data.length === 0) return null;
+  return fromRow(mine.data[0] as GalleryRow);
+}
+
+export async function fetchMyGalleryItems(): Promise<GalleryItem[]> {
+  const { data, error } = await supabase.rpc("list_my_gallery_items");
+  if (error || !data) return [];
+  return (data as GalleryRow[]).map(fromRow);
 }
 
 export type SaveGalleryResult = { ok: true; item: GalleryItem } | { ok: false; reason: "too_large" | "network" };
@@ -227,6 +243,7 @@ export async function createGalleryItem(item: Omit<GalleryItem, "createdAt" | "u
       nodeImageColumn: item.nodeImageColumn ?? null,
       nodeAssets: item.nodeAssets,
       nodeOrder: item.nodeOrder ?? {},
+      isPrivate: item.isPrivate,
     },
     p_owner_secret: ownerSecret,
   });
@@ -235,19 +252,23 @@ export async function createGalleryItem(item: Omit<GalleryItem, "createdAt" | "u
     return { ok: false, reason: tooLarge ? "too_large" : "network" };
   }
   rememberOwnedChart(item.chartId, ownerSecret);
-  await uploadGallerySnapshot(item);
+  // A private chart's SVG is never uploaded to the (public) CDN bucket --
+  // an unlisted-but-fetchable file would defeat the point of "private".
+  if (!item.isPrivate) await uploadGallerySnapshot(item);
   return { ok: true, item: fromRow(data[0] as GalleryRow) };
 }
 
 export async function deleteGalleryItem(chartId: string): Promise<boolean> {
   const ownerSecret = readOwnedCharts()[chartId];
-  if (!ownerSecret) return false;
+  // Always call through: a signed-in user can also delete a chart they made
+  // on a different browser/device, verified server-side via Clerk identity
+  // rather than the local secret, which that browser never had to begin with.
   const { data, error } = await supabase.rpc("delete_gallery_item", {
     p_chart_id: chartId,
-    p_owner_secret: ownerSecret,
+    p_owner_secret: ownerSecret ?? "",
   });
   if (error || !data) return false;
-  forgetOwnedChart(chartId);
+  if (ownerSecret) forgetOwnedChart(chartId);
   return true;
 }
 

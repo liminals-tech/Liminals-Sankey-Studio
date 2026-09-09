@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Code2, Minus, Plus } from "lucide-react";
+import { Check, Code2, Lock, Minus, Plus } from "lucide-react";
 import { useLocation } from "wouter";
 import { BrandMark } from "@/components/studio/BrandMark";
 import { SankeyCanvas } from "@/components/studio/SankeyCanvas";
@@ -59,7 +59,7 @@ export default function ChartViewPage({ params }: { params: { chartId: string } 
           return <>
             <div className="fade-up mb-5 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="font-mono text-[10px] uppercase tracking-[.2em] text-[hsl(var(--primary))]">From the shared gallery</p>
+                <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[.2em] text-[hsl(var(--primary))]">{item.isPrivate && <Lock size={11} />} {item.isPrivate ? "Private — only visible to you" : "From the shared gallery"}</p>
                 <h1 className="mt-1 max-w-[600px] font-serif text-[clamp(1.8rem,3.6vw,3rem)] leading-[.98] tracking-[-.03em]">{item.title || "Untitled story"}</h1>
                 {item.description && <p className="mt-2 max-w-xl text-sm text-[hsl(var(--muted-foreground))]">{item.description}</p>}
               </div>
@@ -69,12 +69,12 @@ export default function ChartViewPage({ params }: { params: { chartId: string } 
                   <span className="min-w-[20px] text-center font-mono text-[11px] text-[hsl(var(--muted-foreground))]" data-testid="text-view-score">{score > 0 ? `+${score}` : score}</span>
                   <button onClick={() => vote(item, -1)} aria-label="Downvote this chart" aria-pressed={myVote === -1} className={`grid size-7 place-items-center rounded ${myVote === -1 ? "bg-[hsl(var(--secondary))] text-[hsl(var(--foreground))]" : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]"}`} data-testid="button-view-downvote"><Minus size={13} /></button>
                 </div>
-                <button onClick={() => copyEmbedCode(item)} className="flex items-center gap-1.5 rounded-md border border-[hsl(var(--border))] px-3.5 py-2 text-xs font-semibold text-[hsl(var(--foreground))] transition hover:bg-[hsl(var(--muted))]" data-testid="button-copy-embed">{copied ? <Check size={14} /> : <Code2 size={14} />} {copied ? "Copied" : "Copy embed code"}</button>
+                {!item.isPrivate && <button onClick={() => copyEmbedCode(item)} className="flex items-center gap-1.5 rounded-md border border-[hsl(var(--border))] px-3.5 py-2 text-xs font-semibold text-[hsl(var(--foreground))] transition hover:bg-[hsl(var(--muted))]" data-testid="button-copy-embed">{copied ? <Check size={14} /> : <Code2 size={14} />} {copied ? "Copied" : "Copy embed code"}</button>}
                 <button onClick={() => setLocation(`/?chart=${encodeURIComponent(item.chartId)}`)} className="rounded-md bg-[hsl(var(--primary))] px-3.5 py-2 text-xs font-semibold text-[hsl(var(--primary-foreground))] shadow-sm transition hover:brightness-95" data-testid="button-use-as-starting-point">Use as a starting point</button>
               </div>
             </div>
             <SankeyCanvas model={model} title={item.title || "Untitled story"} subtitle={item.description} background={item.background} backgroundImage={item.backgroundImage} transparent={item.transparent} showLabels={item.showLabels} notation={item.notation} linkOpacity={item.linkOpacity} selectedId={selectedId} onSelect={(id) => setSelectedId(id)} onResetLayout={() => { setSelectedId(null); setLayoutKey((key) => key + 1); }} />
-            <p className="mt-3 text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">Anyone with this link can view and vote on this chart. Every calculation stays on your device — nothing about how you view this page is sent anywhere beyond the vote you cast. The embed code points at a static snapshot taken when this chart was shared, so it stays put even if the chart is later changed.</p>
+            <p className="mt-3 text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">{item.isPrivate ? "Only you can view this chart, verified by your signed-in session — it never appears in the shared gallery and has no public embed snapshot." : "Anyone with this link can view and vote on this chart. Every calculation stays on your device — nothing about how you view this page is sent anywhere beyond the vote you cast. The embed code points at a static snapshot taken when this chart was shared, so it stays put even if the chart is later changed."}</p>
           </>;
         })()}
       </main>

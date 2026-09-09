@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ClerkProvider, SignIn, SignUp } from "@clerk/react";
+import { ClerkProvider, SignIn, SignUp, useUser } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -11,7 +11,7 @@ import ChartViewPage from "@/pages/chart-view";
 import { Route, Switch, useLocation, Router as WouterRouter } from "wouter";
 import { defaultTemplate, type Row } from "@/data/templates";
 import { parseDelimited, type ImportSummary } from "@/lib/data";
-import { createChartId, createGalleryItem, deleteGalleryItem as deleteGalleryItemRemote, fetchGallery, fetchGalleryItem, myGalleryVote, ownsGalleryItem, voteOnGalleryItem, type GalleryItem } from "@/lib/gallery";
+import { createChartId, createGalleryItem, deleteGalleryItem as deleteGalleryItemRemote, fetchGallery, fetchGalleryItem, fetchMyGalleryItems, myGalleryVote, ownsGalleryItem, voteOnGalleryItem, type GalleryItem } from "@/lib/gallery";
 import { buildSankeyModel } from "@/lib/sankey";
 import { DataPreview } from "@/components/studio/DataPreview";
 import { DatasetRail } from "@/components/studio/DatasetRail";
@@ -87,6 +87,15 @@ const clerkAppearance = {
   },
 };
 
+// Studio renders inside both the Clerk-enabled and plain (no ClerkProvider)
+// trees, so it can't unconditionally call useUser() -- this is only mounted
+// when authEnabled, reporting sign-in state up rather than being called directly.
+function ClerkIdentityBridge({ onChange }: { onChange: (signedIn: boolean) => void }) {
+  const { isSignedIn } = useUser();
+  useEffect(() => { onChange(Boolean(isSignedIn)); }, [isSignedIn, onChange]);
+  return null;
+}
+
 function Studio({ authEnabled }: { authEnabled: boolean }) {
   const [rows, setRows] = useState<Row[]>(defaultTemplate.rows);
   const [columns, setColumns] = useState(defaultTemplate.columns);
@@ -121,6 +130,10 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
   const [nodeAssets, setNodeAssets] = useState<Record<string, string>>({});
   const [nodeOrder, setNodeOrder] = useState<Record<number, string[]>>({});
   const [galleryNotice, setGalleryNotice] = useState("");
+  const [signedIn, setSignedIn] = useState(false);
+  const [myCharts, setMyCharts] = useState<GalleryItem[]>([]);
+  const [myChartsLoading, setMyChartsLoading] = useState(false);
+  const [isPrivateExport, setIsPrivateExport] = useState(false);
   const [, setLocation] = useLocation();
 
   const model = useMemo(() => buildSankeyModel(rows, levels, valueColumn, reverse, palette, nodeWidth, nodeImageColumn, nodeAssets, nodeOrder), [rows, levels, valueColumn, reverse, palette, nodeWidth, nodeImageColumn, nodeAssets, nodeOrder, layoutKey]);
@@ -136,6 +149,13 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
     }
     return () => { active = false; };
   }, []);
+  useEffect(() => {
+    if (!signedIn) { setMyCharts([]); return; }
+    let active = true;
+    setMyChartsLoading(true);
+    fetchMyGalleryItems().then((items) => { if (active) { setMyCharts(items); setMyChartsLoading(false); } });
+    return () => { active = false; };
+  }, [signedIn]);
   const loadGalleryItem = (item: GalleryItem) => {
     setRows(item.rows); setColumns(item.columns); setLevels(item.levels); setValueColumn(item.valueColumn); setReverse(item.reverse); setPalette(item.palette); setBackground(item.background); setTransparent(item.transparent); setShowLabels(item.showLabels); setNotation(item.notation); setLinkOpacity(item.linkOpacity); setNodeWidth(item.nodeWidth); setAspect(item.aspect); setBackgroundImage(item.backgroundImage); setNodeImageColumn(item.nodeImageColumn ?? ""); setNodeAssets(item.nodeAssets ?? {}); setNodeOrder(item.nodeOrder ?? {}); setTitle(item.title); setSubtitle(item.description); setSelectedId(null); setImportSummary(undefined); setImportError(""); setCurrentChartId(item.chartId); setGalleryNotice("");
   };
@@ -153,11 +173,18 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
   const openImport = (tab: "file" | "paste" = "file") => { setImportTab(tab); setImportOpen(true); };
   const openExport = () => { setCurrentChartId((id) => id ?? createChartId()); setExportOpen(true); };
   const saveExportToGallery = async (chartId: string) => {
-    const item: Omit<GalleryItem, "createdAt" | "upvotes" | "downvotes"> = { chartId, title: title || "Untitled story", description: subtitle, columns, rows, levels, valueColumn, reverse, palette, background, transparent, showLabels, notation, linkOpacity, nodeWidth, aspect, backgroundImage, nodeImageColumn, nodeAssets, nodeOrder };
+    const item: Omit<GalleryItem, "createdAt" | "upvotes" | "downvotes"> = { chartId, title: title || "Untitled story", description: subtitle, columns, rows, levels, valueColumn, reverse, palette, background, transparent, showLabels, notation, linkOpacity, nodeWidth, aspect, backgroundImage, nodeImageColumn, nodeAssets, nodeOrder, isPrivate: signedIn && isPrivateExport };
     const result = await createGalleryItem(item);
     if (result.ok) {
-      setGallery((current) => [result.item, ...current.filter((existing) => existing.chartId !== chartId)].slice(0, 40));
-      setGalleryNotice(`Saved ${chartId} to the shared gallery — visible to everyone.`);
+      if (result.item.isPrivate) {
+        setMyCharts((current) => [result.item, ...current.filter((existing) => existing.chartId !== chartId)]);
+        setGalleryNotice(`Saved ${chartId} privately — only visible to you.`);
+      } else {
+        setGallery((current) => [result.item, ...current.filter((existing) => existing.chartId !== chartId)].slice(0, 40));
+        if (signedIn) setMyCharts((current) => [result.item, ...current.filter((existing) => existing.chartId !== chartId)]);
+        setGalleryNotice(`Saved ${chartId} to the shared gallery — visible to everyone.`);
+      }
+      setIsPrivateExport(false);
     } else if (result.reason === "too_large") {
       setGalleryNotice("The export completed, but this chart's images were too large to share (max 2MB).");
     } else {
@@ -167,17 +194,25 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
   };
   const deleteGalleryItem = async (chartId: string) => {
     const removed = await deleteGalleryItemRemote(chartId);
-    if (removed) setGallery((current) => current.filter((item) => item.chartId !== chartId));
+    if (removed) {
+      setGallery((current) => current.filter((item) => item.chartId !== chartId));
+      setMyCharts((current) => current.filter((item) => item.chartId !== chartId));
+    }
     if (currentChartId === chartId) setCurrentChartId(undefined);
   };
   const voteGalleryItem = async (chartId: string, vote: 1 | -1) => {
     const result = await voteOnGalleryItem(chartId, vote);
-    if (result.ok) setGallery((current) => current.map((item) => item.chartId === chartId ? { ...item, upvotes: result.upvotes, downvotes: result.downvotes } : item));
+    if (result.ok) {
+      const patch = (item: GalleryItem) => item.chartId === chartId ? { ...item, upvotes: result.upvotes, downvotes: result.downvotes } : item;
+      setGallery((current) => current.map(patch));
+      setMyCharts((current) => current.map(patch));
+    }
   };
   return <div className="studio-noise flex min-h-[100dvh] flex-col bg-[hsl(var(--background))]">
+    {authEnabled && <ClerkIdentityBridge onChange={setSignedIn} />}
      <TopBar authEnabled={authEnabled} onImport={() => openImport()} onExport={openExport} onHelp={() => setHelpOpen(true)} onMenu={() => setDataMenuOpen((open) => !open)} onInspector={() => setInspectorOpen((open) => !open)} onSignIn={() => setLocation("/sign-in")} onSignUp={() => setLocation("/sign-up")} dataOpen={dataMenuOpen} inspectorOpen={inspectorOpen} />
     <div className="flex flex-1 flex-col lg:flex-row">
-      <div id="dataset-rail"><DatasetRail onImport={() => openImport()} onPaste={() => openImport("paste")} collapsed={!dataMenuOpen} onToggle={() => setDataMenuOpen((open) => !open)} gallery={gallery} galleryLoading={galleryLoading} activeGalleryId={currentChartId} onSelectGallery={loadGalleryItem} onDeleteGallery={deleteGalleryItem} canDeleteGallery={ownsGalleryItem} onVoteGallery={voteGalleryItem} myGalleryVote={myGalleryVote} /></div>
+      <div id="dataset-rail"><DatasetRail onImport={() => openImport()} onPaste={() => openImport("paste")} collapsed={!dataMenuOpen} onToggle={() => setDataMenuOpen((open) => !open)} gallery={gallery} galleryLoading={galleryLoading} activeGalleryId={currentChartId} onSelectGallery={loadGalleryItem} onDeleteGallery={deleteGalleryItem} canDeleteGallery={ownsGalleryItem} onVoteGallery={voteGalleryItem} myGalleryVote={myGalleryVote} signedIn={signedIn} myCharts={myCharts} myChartsLoading={myChartsLoading} /></div>
       <main className="min-w-0 flex-1 px-4 py-5 sm:px-7 sm:py-7">
         <div className="mx-auto max-w-[1160px]">
           <div className="fade-up mb-5 flex flex-wrap items-end justify-between gap-4">
@@ -198,7 +233,7 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
       <Inspector columns={columns} levels={levels} valueColumn={valueColumn} reverse={reverse} setLevels={setLevels} setValueColumn={setValueColumn} setReverse={setReverse} palette={palette} setPalette={setPalette} background={background} setBackground={setBackground} backgroundImage={backgroundImage} setBackgroundImage={setBackgroundImage} transparent={transparent} setTransparent={setTransparent} showLabels={showLabels} setShowLabels={setShowLabels} notation={notation} setNotation={setNotation} imageColumns={columns.filter((column) => column !== valueColumn)} imageColumn={nodeImageColumn} setImageColumn={setNodeImageColumn} nodes={model.nodes.map(({ id, label, level }) => ({ id, label, level }))} nodeAssets={nodeAssets} setNodeAsset={(id, image) => setNodeAssets((assets) => ({ ...assets, [id]: image }))} clearNodeAsset={(id) => setNodeAssets((assets) => { const next = { ...assets }; delete next[id]; return next; })} linkOpacity={linkOpacity} setLinkOpacity={setLinkOpacity} nodeWidth={nodeWidth} setNodeWidth={setNodeWidth} aspect={aspect} setAspect={setAspect} collapsed={!inspectorOpen} onToggle={() => setInspectorOpen((open) => !open)} />
     </div>
     {importOpen && <ImportPanel initialTab={importTab} onImported={(summary) => { onImported(summary); setImportOpen(false); }} onClose={() => setImportOpen(false)} />}
-    {exportOpen && currentChartId && <ExportMenu model={model} chartId={currentChartId} title={title || "Untitled story"} subtitle={subtitle} background={background} backgroundImage={backgroundImage} transparent={transparent} showLabels={showLabels} notation={notation} onClose={() => setExportOpen(false)} onSaved={saveExportToGallery} />}
+    {exportOpen && currentChartId && <ExportMenu model={model} chartId={currentChartId} title={title || "Untitled story"} subtitle={subtitle} background={background} backgroundImage={backgroundImage} transparent={transparent} showLabels={showLabels} notation={notation} signedIn={signedIn} isPrivate={isPrivateExport} onPrivateChange={setIsPrivateExport} onClose={() => setExportOpen(false)} onSaved={saveExportToGallery} />}
     {helpOpen && <div className="fixed inset-0 z-40 grid place-items-center bg-[hsl(var(--foreground)/.28)] p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="help-title"><div className="fade-up w-full max-w-[440px] rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl"><div className="flex items-start justify-between"><div><p className="font-mono text-[10px] uppercase tracking-[.18em] text-[hsl(var(--primary))]">Quick guide</p><h2 id="help-title" className="mt-1 font-serif text-2xl">A few good moves</h2></div><button onClick={() => setHelpOpen(false)} className="text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]" data-testid="button-close-help">Close</button></div><ol className="mt-5 space-y-3 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]"><li><b className="mr-2 font-mono text-[hsl(var(--primary))]">01</b>Pick an example question, or import a table from your device.</li><li><b className="mr-2 font-mono text-[hsl(var(--primary))]">02</b>Use Map the story to choose the order of your levels and the value column.</li><li><b className="mr-2 font-mono text-[hsl(var(--primary))]">03</b>Click any node or flow to isolate its story, then export a PNG or editable SVG.</li></ol><button onClick={() => setHelpOpen(false)} className="mt-6 w-full rounded-md bg-[hsl(var(--primary))] py-2.5 text-xs font-semibold text-[hsl(var(--primary-foreground))]" data-testid="button-start-exploring">Start exploring</button></div></div>}
   </div>;
 }

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Database, FileUp, GalleryHorizontalEnd, Link2, Minus, Plus, Table2, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Database, FileUp, GalleryHorizontalEnd, Link2, Lock, Minus, Plus, Table2, Trash2, UserRound } from "lucide-react";
 import { useMemo } from "react";
 import type { GalleryItem } from "@/lib/gallery";
 import { modelToSvg } from "@/lib/export";
@@ -39,6 +39,39 @@ function GalleryThumbnail({ item }: { item: GalleryItem }) {
   return <img src={src} alt="" className="h-9 w-16 shrink-0 rounded border border-[hsl(var(--sidebar-border))] object-cover" style={{ backgroundColor: item.transparent ? "transparent" : item.background }} />;
 }
 
+// Shared per-item row for both the shared gallery and "My charts": thumbnail,
+// sample flow path, title, votes, permalink and an optional delete button.
+function GalleryItemRow({ item, active, onSelect, onDelete, canDelete, onVote, myVote }: {
+  item: GalleryItem;
+  active: boolean;
+  onSelect: (item: GalleryItem) => void;
+  onDelete: (chartId: string) => void;
+  canDelete: boolean;
+  onVote: (chartId: string, vote: 1 | -1) => void;
+  myVote: 1 | -1 | 0;
+}) {
+  const score = item.upvotes - item.downvotes;
+  return (
+    <div className={`group flex items-start gap-2 rounded-lg p-2 transition ${active ? "bg-[hsl(var(--sidebar-accent))]" : "hover:bg-[hsl(var(--sidebar-accent)/.68)]"}`}>
+      <GalleryThumbnail item={item} />
+      <div className="min-w-0 flex-1">
+        <button onClick={() => onSelect(item)} className="block w-full text-left" title="Use this chart as a starting point" data-testid={`button-gallery-${item.chartId}`}>
+          {sampleFlowPath(item) && <span className="block truncate font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.5)]" data-testid={`text-flow-${item.chartId}`}>{sampleFlowPath(item)}</span>}
+          <span className="flex items-center gap-1 truncate text-[12px] font-medium text-[hsl(var(--sidebar-foreground)/.8)]">{item.isPrivate && <Lock size={9} className="shrink-0 text-[hsl(var(--sidebar-foreground)/.5)]" />}{item.title || "Untitled story"}</span>
+          <span className="mt-0.5 block truncate text-[9px] text-[hsl(var(--sidebar-foreground)/.42)]">Use as a starting point · {relativeTime(item.createdAt)}</span>
+        </button>
+        <div className="mt-1 flex items-center gap-1">
+          <button onClick={(event) => { event.stopPropagation(); onVote(item.chartId, 1); }} aria-label="Upvote this chart" aria-pressed={myVote === 1} className={`grid size-5 place-items-center rounded ${myVote === 1 ? "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-primary))]" : "text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]"}`} data-testid={`button-upvote-${item.chartId}`}><Plus size={10} /></button>
+          <span className="min-w-[14px] text-center font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.55)]" data-testid={`text-score-${item.chartId}`}>{score > 0 ? `+${score}` : score}</span>
+          <button onClick={(event) => { event.stopPropagation(); onVote(item.chartId, -1); }} aria-label="Downvote this chart" aria-pressed={myVote === -1} className={`grid size-5 place-items-center rounded ${myVote === -1 ? "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-foreground))]" : "text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]"}`} data-testid={`button-downvote-${item.chartId}`}><Minus size={10} /></button>
+          {!item.isPrivate && <a href={galleryItemPermalink(item.chartId)} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} aria-label="Open a shareable link to this chart" title="Open a shareable link to this chart" className="ml-1 grid size-5 place-items-center rounded text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]" data-testid={`link-permalink-${item.chartId}`}><Link2 size={10} /></a>}
+        </div>
+      </div>
+      {canDelete && <button onClick={(event) => { event.stopPropagation(); onDelete(item.chartId); }} className="grid size-7 shrink-0 place-items-center rounded text-[hsl(var(--sidebar-foreground)/.4)] opacity-0 transition hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))] group-hover:opacity-100 focus:opacity-100" aria-label={`Delete ${item.title || "saved chart"}`} data-testid={`button-delete-gallery-${item.chartId}`}><Trash2 size={12} /></button>}
+    </div>
+  );
+}
+
 type Props = {
   onImport: () => void;
   onPaste: () => void;
@@ -52,9 +85,12 @@ type Props = {
   canDeleteGallery: (chartId: string) => boolean;
   onVoteGallery: (chartId: string, vote: 1 | -1) => void;
   myGalleryVote: (chartId: string) => 1 | -1 | 0;
+  signedIn: boolean;
+  myCharts: GalleryItem[];
+  myChartsLoading: boolean;
 };
 
-export function DatasetRail({ onImport, onPaste, collapsed, onToggle, gallery, galleryLoading, activeGalleryId, onSelectGallery, onDeleteGallery, canDeleteGallery, onVoteGallery, myGalleryVote }: Props) {
+export function DatasetRail({ onImport, onPaste, collapsed, onToggle, gallery, galleryLoading, activeGalleryId, onSelectGallery, onDeleteGallery, canDeleteGallery, onVoteGallery, myGalleryVote, signedIn, myCharts, myChartsLoading }: Props) {
   if (collapsed) {
     return (
       <aside className="flex w-full shrink-0 items-center justify-between border-b border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar))] px-3 py-2 text-[hsl(var(--sidebar-foreground))] lg:w-[52px] lg:flex-col lg:justify-start lg:px-2 lg:py-4" aria-label="Collapsed gallery menu">
@@ -73,27 +109,15 @@ export function DatasetRail({ onImport, onPaste, collapsed, onToggle, gallery, g
           </button>
         </div>
         {galleryLoading ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.42)]">Loading the shared gallery…</p> : gallery.length === 0 ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.42)]">Export a chart to add it here for everyone to see and reuse.</p> : <div className="space-y-1.5">
-          {gallery.map((item) => { const myVote = myGalleryVote(item.chartId); const score = item.upvotes - item.downvotes; return (
-          <div key={item.chartId} className={`group flex items-start gap-2 rounded-lg p-2 transition ${activeGalleryId === item.chartId ? "bg-[hsl(var(--sidebar-accent))]" : "hover:bg-[hsl(var(--sidebar-accent)/.68)]"}`}>
-            <GalleryThumbnail item={item} />
-            <div className="min-w-0 flex-1">
-              <button onClick={() => onSelectGallery(item)} className="block w-full text-left" title="Use this chart as a starting point" data-testid={`button-gallery-${item.chartId}`}>
-                {sampleFlowPath(item) && <span className="block truncate font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.5)]" data-testid={`text-flow-${item.chartId}`}>{sampleFlowPath(item)}</span>}
-                <span className="block truncate text-[12px] font-medium text-[hsl(var(--sidebar-foreground)/.8)]">{item.title || "Untitled story"}</span>
-                <span className="mt-0.5 block truncate text-[9px] text-[hsl(var(--sidebar-foreground)/.42)]">Use as a starting point · {relativeTime(item.createdAt)}</span>
-              </button>
-              <div className="mt-1 flex items-center gap-1">
-                <button onClick={(event) => { event.stopPropagation(); onVoteGallery(item.chartId, 1); }} aria-label="Upvote this chart" aria-pressed={myVote === 1} className={`grid size-5 place-items-center rounded ${myVote === 1 ? "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-primary))]" : "text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]"}`} data-testid={`button-upvote-${item.chartId}`}><Plus size={10} /></button>
-                <span className="min-w-[14px] text-center font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.55)]" data-testid={`text-score-${item.chartId}`}>{score > 0 ? `+${score}` : score}</span>
-                <button onClick={(event) => { event.stopPropagation(); onVoteGallery(item.chartId, -1); }} aria-label="Downvote this chart" aria-pressed={myVote === -1} className={`grid size-5 place-items-center rounded ${myVote === -1 ? "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-foreground))]" : "text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]"}`} data-testid={`button-downvote-${item.chartId}`}><Minus size={10} /></button>
-                <a href={galleryItemPermalink(item.chartId)} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} aria-label="Open a shareable link to this chart" title="Open a shareable link to this chart" className="ml-1 grid size-5 place-items-center rounded text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]" data-testid={`link-permalink-${item.chartId}`}><Link2 size={10} /></a>
-              </div>
-            </div>
-            {canDeleteGallery(item.chartId) && <button onClick={(event) => { event.stopPropagation(); onDeleteGallery(item.chartId); }} className="grid size-7 shrink-0 place-items-center rounded text-[hsl(var(--sidebar-foreground)/.4)] opacity-0 transition hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))] group-hover:opacity-100 focus:opacity-100" aria-label={`Delete ${item.title || "saved chart"}`} data-testid={`button-delete-gallery-${item.chartId}`}><Trash2 size={12} /></button>}
-          </div>
-          ); })}
+          {gallery.map((item) => <GalleryItemRow key={item.chartId} item={item} active={activeGalleryId === item.chartId} onSelect={onSelectGallery} onDelete={onDeleteGallery} canDelete={canDeleteGallery(item.chartId)} onVote={onVoteGallery} myVote={myGalleryVote(item.chartId)} />)}
         </div>}
       </div>
+      {signedIn && <div className="border-t border-[hsl(var(--sidebar-border))] px-3 py-4">
+        <div className="mb-2 flex items-center gap-2 px-2 text-[10px] font-medium uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.56)]"><UserRound size={12} /> My charts <span className="font-mono text-[9px]">({myCharts.length})</span></div>
+        {myChartsLoading ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.42)]">Loading your charts…</p> : myCharts.length === 0 ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.42)]">Charts you export while signed in appear here, including private ones.</p> : <div className="space-y-1.5">
+          {myCharts.map((item) => <GalleryItemRow key={item.chartId} item={item} active={activeGalleryId === item.chartId} onSelect={onSelectGallery} onDelete={onDeleteGallery} canDelete onVote={onVoteGallery} myVote={myGalleryVote(item.chartId)} />)}
+        </div>}
+      </div>}
       <div className="mt-auto hidden border-t border-[hsl(var(--sidebar-border))] p-4 lg:block">
         <div className="mb-3 flex items-center gap-2 text-[11px] font-medium text-[hsl(var(--sidebar-foreground)/.66)]"><Database size={13} /> Your data</div>
         <button onClick={onImport} className="mb-2 flex w-full items-center gap-2 rounded-md border border-dashed border-[hsl(var(--sidebar-border))] px-3 py-2 text-left text-[11px] text-[hsl(var(--sidebar-foreground)/.65)] transition hover:border-[hsl(var(--sidebar-primary)/.7)] hover:text-[hsl(var(--sidebar-foreground))]" data-testid="button-import-file">

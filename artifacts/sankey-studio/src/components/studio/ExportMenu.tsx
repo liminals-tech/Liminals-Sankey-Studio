@@ -1,9 +1,9 @@
-import { Check, Download, FileImage, FileOutput, Film, GalleryHorizontalEnd, X } from "lucide-react";
+import { Check, Download, FileImage, FileOutput, Film, GalleryHorizontalEnd, Lock, X } from "lucide-react";
 import { useState } from "react";
 import type { SankeyModel } from "@/lib/sankey";
 import { exportGif, exportPng, exportSvg, type SankeyExportOptions } from "@/lib/export";
 
-type Props = { model: SankeyModel; chartId: string; title: string; subtitle: string; background: string; backgroundImage?: string; transparent: boolean; showLabels: boolean; notation: "full" | "compact" | "percent"; onClose: () => void; onSaved: (chartId: string) => Promise<void> };
+type Props = { model: SankeyModel; chartId: string; title: string; subtitle: string; background: string; backgroundImage?: string; transparent: boolean; showLabels: boolean; notation: "full" | "compact" | "percent"; signedIn: boolean; isPrivate: boolean; onPrivateChange: (value: boolean) => void; onClose: () => void; onSaved: (chartId: string) => Promise<void> };
 type GifSettings = { revealDurationMs: number; introHoldMs: number; outroHoldMs: number; width: number; height: number };
 type GifFramePreset = "1920x1080" | "1280x720" | "1080x1080" | "1080x1350" | "1080x1920" | "custom";
 
@@ -18,7 +18,7 @@ const gifFramePresets: Array<{ value: GifFramePreset; label: string; width?: num
 
 const formatSeconds = (milliseconds: number) => `${(milliseconds / 1000).toFixed(milliseconds % 1000 === 0 ? 0 : 1)}s`;
 
-export function ExportMenu({ model, chartId, title, subtitle, background, backgroundImage, transparent, showLabels, notation, onClose, onSaved }: Props) {
+export function ExportMenu({ model, chartId, title, subtitle, background, backgroundImage, transparent, showLabels, notation, signedIn, isPrivate, onPrivateChange, onClose, onSaved }: Props) {
   const [done, setDone] = useState("");
   const [gifProgress, setGifProgress] = useState<number | null>(null);
   const [gifFramePreset, setGifFramePreset] = useState<GifFramePreset>("1920x1080");
@@ -49,7 +49,8 @@ export function ExportMenu({ model, chartId, title, subtitle, background, backgr
     <div className="fade-up max-h-[calc(100dvh-2rem)] w-full max-w-[430px] overflow-y-auto rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl">
       <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-5 py-4"><div><p className="font-mono text-[10px] uppercase tracking-[.18em] text-[hsl(var(--primary))]">Output</p><h2 id="export-title" className="mt-1 font-serif text-2xl">Take it with you</h2></div><button onClick={onClose} className="grid size-8 place-items-center rounded-md text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]" aria-label="Close export menu" data-testid="button-close-export"><X size={16} /></button></div>
       <div className="space-y-3 p-5">
-        <div className="mb-1 flex items-center gap-2 rounded-md bg-[hsl(var(--secondary)/.55)] px-3 py-2 text-[10px] text-[hsl(var(--muted-foreground))]"><GalleryHorizontalEnd size={13} className="text-[hsl(var(--primary))]" /><span>Export ID <strong className="font-mono text-[hsl(var(--foreground))]">{chartId}</strong> · added to the shared gallery — visible to everyone — after export</span></div>
+        <div className="mb-1 flex items-center gap-2 rounded-md bg-[hsl(var(--secondary)/.55)] px-3 py-2 text-[10px] text-[hsl(var(--muted-foreground))]">{isPrivate ? <Lock size={13} className="text-[hsl(var(--primary))]" /> : <GalleryHorizontalEnd size={13} className="text-[hsl(var(--primary))]" />}<span>Export ID <strong className="font-mono text-[hsl(var(--foreground))]">{chartId}</strong> · {isPrivate ? "kept private — only visible to you — after export" : "added to the shared gallery — visible to everyone — after export"}</span></div>
+        {signedIn ? <label className="mb-1 flex items-center gap-2 rounded-md border border-[hsl(var(--border))] px-3 py-2 text-[10px] text-[hsl(var(--foreground))]"><input type="checkbox" checked={isPrivate} onChange={(event) => onPrivateChange(event.target.checked)} className="accent-[hsl(var(--primary))]" data-testid="checkbox-export-private" /><span>Keep this chart private — only visible to you</span></label> : <p className="mb-1 rounded-md border border-dashed border-[hsl(var(--border))] px-3 py-2 text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">Sign in to keep exports private instead of adding them to the shared gallery.</p>}
         {(backgroundImage || model.nodes.some((node) => node.image)) && <p className="rounded-md border border-[hsl(var(--border))] px-3 py-2 text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">Local images are embedded in exports. PNG and GIF may reject remote image URLs without CORS permission; SVG keeps the original image reference.</p>}
         {transparent && <p className="rounded-md border border-[hsl(var(--border))] px-3 py-2 text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">GIF frames use the selected canvas color; transparent backgrounds are preserved by the transparent PNG export instead.</p>}
         <section className="rounded-lg border border-[hsl(var(--primary)/.35)] bg-[hsl(var(--primary)/.04)] p-3.5" aria-labelledby="gif-export-heading">
