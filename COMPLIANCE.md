@@ -5,7 +5,7 @@ Public URL: To be configured
 
 ## Services
 
-Supabase: YES — Postgres storage for the public chart gallery only (no Supabase Auth, no other Supabase product in use)
+Supabase: YES — Postgres storage for the public chart gallery, plus Supabase Storage for static embed-image snapshots (no Supabase Auth, no other Supabase product in use)
 Supabase Auth: NO
 Umami: NO
 Stripe: NO

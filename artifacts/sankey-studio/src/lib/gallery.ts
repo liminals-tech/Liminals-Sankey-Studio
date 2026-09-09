@@ -1,5 +1,29 @@
 import type { Row } from "@/data/templates";
 import { supabase } from "@/lib/supabase";
+import { buildSankeyModel } from "@/lib/sankey";
+import { modelToSvg } from "@/lib/export";
+
+const GALLERY_SVG_BUCKET = "gallery-svg";
+
+export function galleryEmbedUrl(chartId: string): string {
+  return supabase.storage.from(GALLERY_SVG_BUCKET).getPublicUrl(`${chartId}.svg`).data.publicUrl;
+}
+
+// A one-time snapshot taken when a chart is first shared, not regenerated on
+// every view: embeds should show what was published, not silently change if
+// the source chart is later edited, and -- more importantly -- this is what
+// lets an embed be served straight from Storage's CDN with zero database or
+// app load per view, however popular the page embedding it gets.
+async function uploadGallerySnapshot(item: Omit<GalleryItem, "createdAt" | "upvotes" | "downvotes">) {
+  try {
+    const model = buildSankeyModel(item.rows, item.levels, item.valueColumn, item.reverse, item.palette, item.nodeWidth, item.nodeImageColumn, item.nodeAssets, item.nodeOrder);
+    const svg = modelToSvg(model, { title: item.title, subtitle: item.description, background: item.background, transparent: item.transparent, showLabels: item.showLabels, notation: item.notation, backgroundImage: item.backgroundImage, chartId: item.chartId });
+    await supabase.storage.from(GALLERY_SVG_BUCKET).upload(`${item.chartId}.svg`, new Blob([svg], { type: "image/svg+xml" }), { contentType: "image/svg+xml", upsert: false });
+  } catch {
+    // Non-critical: the chart is already saved and shareable via the interactive
+    // permalink page even if this static snapshot fails to upload.
+  }
+}
 
 export type GalleryItem = {
   chartId: string;
@@ -211,6 +235,7 @@ export async function createGalleryItem(item: Omit<GalleryItem, "createdAt" | "u
     return { ok: false, reason: tooLarge ? "too_large" : "network" };
   }
   rememberOwnedChart(item.chartId, ownerSecret);
+  await uploadGallerySnapshot(item);
   return { ok: true, item: fromRow(data[0] as GalleryRow) };
 }
 

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Minus, Plus } from "lucide-react";
+import { Check, Code2, Minus, Plus } from "lucide-react";
 import { useLocation } from "wouter";
 import { BrandMark } from "@/components/studio/BrandMark";
 import { SankeyCanvas } from "@/components/studio/SankeyCanvas";
-import { fetchGalleryItem, myGalleryVote, voteOnGalleryItem, type GalleryItem } from "@/lib/gallery";
+import { fetchGalleryItem, galleryEmbedUrl, myGalleryVote, voteOnGalleryItem, type GalleryItem } from "@/lib/gallery";
 import { buildSankeyModel } from "@/lib/sankey";
 
 type LoadState = { status: "loading" } | { status: "not-found" } | { status: "ready"; item: GalleryItem };
@@ -13,6 +13,7 @@ export default function ChartViewPage({ params }: { params: { chartId: string } 
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [layoutKey, setLayoutKey] = useState(0);
+  const [copied, setCopied] = useState(false);
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -28,6 +29,17 @@ export default function ChartViewPage({ params }: { params: { chartId: string } 
   const vote = async (item: GalleryItem, value: 1 | -1) => {
     const result = await voteOnGalleryItem(item.chartId, value);
     if (result.ok) setState({ status: "ready", item: { ...item, upvotes: result.upvotes, downvotes: result.downvotes } });
+  };
+
+  const copyEmbedCode = async (item: GalleryItem) => {
+    const code = `<img src="${galleryEmbedUrl(item.chartId)}" alt="${item.title || "Untitled story"}" />`;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard access can be blocked by the browser; nothing to recover from here.
+    }
   };
 
   return (
@@ -57,11 +69,12 @@ export default function ChartViewPage({ params }: { params: { chartId: string } 
                   <span className="min-w-[20px] text-center font-mono text-[11px] text-[hsl(var(--muted-foreground))]" data-testid="text-view-score">{score > 0 ? `+${score}` : score}</span>
                   <button onClick={() => vote(item, -1)} aria-label="Downvote this chart" aria-pressed={myVote === -1} className={`grid size-7 place-items-center rounded ${myVote === -1 ? "bg-[hsl(var(--secondary))] text-[hsl(var(--foreground))]" : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]"}`} data-testid="button-view-downvote"><Minus size={13} /></button>
                 </div>
+                <button onClick={() => copyEmbedCode(item)} className="flex items-center gap-1.5 rounded-md border border-[hsl(var(--border))] px-3.5 py-2 text-xs font-semibold text-[hsl(var(--foreground))] transition hover:bg-[hsl(var(--muted))]" data-testid="button-copy-embed">{copied ? <Check size={14} /> : <Code2 size={14} />} {copied ? "Copied" : "Copy embed code"}</button>
                 <button onClick={() => setLocation(`/?chart=${encodeURIComponent(item.chartId)}`)} className="rounded-md bg-[hsl(var(--primary))] px-3.5 py-2 text-xs font-semibold text-[hsl(var(--primary-foreground))] shadow-sm transition hover:brightness-95" data-testid="button-use-as-starting-point">Use as a starting point</button>
               </div>
             </div>
             <SankeyCanvas model={model} title={item.title || "Untitled story"} subtitle={item.description} background={item.background} backgroundImage={item.backgroundImage} transparent={item.transparent} showLabels={item.showLabels} notation={item.notation} linkOpacity={item.linkOpacity} selectedId={selectedId} onSelect={(id) => setSelectedId(id)} onResetLayout={() => { setSelectedId(null); setLayoutKey((key) => key + 1); }} />
-            <p className="mt-3 text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">Anyone with this link can view and vote on this chart. Every calculation stays on your device — nothing about how you view this page is sent anywhere beyond the vote you cast.</p>
+            <p className="mt-3 text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">Anyone with this link can view and vote on this chart. Every calculation stays on your device — nothing about how you view this page is sent anywhere beyond the vote you cast. The embed code points at a static snapshot taken when this chart was shared, so it stays put even if the chart is later changed.</p>
           </>;
         })()}
       </main>
