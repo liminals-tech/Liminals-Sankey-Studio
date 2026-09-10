@@ -2,10 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ClerkProvider, SignIn, SignUp, useUser } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { installGlobalErrorReporting } from "@/lib/errors";
 import NotFound from "@/pages/not-found";
 import ChartViewPage from "@/pages/chart-view";
 import { PrivacyPage, TermsPage } from "@/pages/legal";
@@ -22,7 +20,8 @@ import { Inspector } from "@/components/studio/Inspector";
 import { SankeyCanvas } from "@/components/studio/SankeyCanvas";
 import { TopBar } from "@/components/studio/TopBar";
 
-const queryClient = new QueryClient();
+installGlobalErrorReporting();
+
 type Palette = "signal" | "mineral" | "citrus";
 type Notation = "full" | "compact" | "percent";
 
@@ -260,9 +259,9 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 function App() {
   const ClerkApp = () => {
     const [, setLocation] = useLocation();
-    return <ClerkProvider publishableKey={clerkPubKey!} proxyUrl={clerkProxyUrl} appearance={clerkAppearance} signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} localization={{ signIn: { start: { title: "Welcome back", subtitle: "Sign in to continue your visual work." } }, signUp: { start: { title: "Create your account", subtitle: "Save your visual work for later." } } }} routerPush={(to) => setLocation(stripBase(to))} routerReplace={(to) => setLocation(stripBase(to), { replace: true })}><QueryClientProvider client={queryClient}><TooltipProvider><RoutedErrorBoundary><Router authEnabled /></RoutedErrorBoundary><Toaster /></TooltipProvider></QueryClientProvider></ClerkProvider>;
+    return <ClerkProvider publishableKey={clerkPubKey!} proxyUrl={clerkProxyUrl} appearance={clerkAppearance} signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} localization={{ signIn: { start: { title: "Welcome back", subtitle: "Sign in to continue your visual work." } }, signUp: { start: { title: "Create your account", subtitle: "Save your visual work for later." } } }} routerPush={(to) => setLocation(stripBase(to))} routerReplace={(to) => setLocation(stripBase(to), { replace: true })}><RoutedErrorBoundary><Router authEnabled /></RoutedErrorBoundary></ClerkProvider>;
   };
-  const PublicApp = () => <QueryClientProvider client={queryClient}><TooltipProvider><RoutedErrorBoundary><Router authEnabled={false} /></RoutedErrorBoundary><Toaster /></TooltipProvider></QueryClientProvider>;
+  const PublicApp = () => <RoutedErrorBoundary><Router authEnabled={false} /></RoutedErrorBoundary>;
   return <WouterRouter base={basePath}>{clerkPubKey ? <ClerkApp /> : <PublicApp />}</WouterRouter>;
 }
 

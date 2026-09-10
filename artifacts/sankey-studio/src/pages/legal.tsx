@@ -47,6 +47,9 @@ export function PrivacyPage() {
       <H2>No tracking</H2>
       <p>There is no analytics, no advertising, and no tracking of your activity across visits beyond the functional identifiers described above.</p>
 
+      <H2>Error reports</H2>
+      <p>If the app hits an unexpected error, a brief technical report — the error message, stack trace, the page you were on, and your browser's user-agent string — is sent to our own database so we can fix it. This never includes your chart data or anything you typed, and is not shared with any third-party monitoring service.</p>
+
       <H2>Children</H2>
       <p>This product isn't directed at children and isn't knowingly used to collect information from them.</p>
 

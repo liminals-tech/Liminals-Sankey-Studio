@@ -5,7 +5,7 @@ Public URL: To be configured
 
 ## Services
 
-Supabase: YES — Postgres storage for the public chart gallery, plus Supabase Storage for static embed-image snapshots (no Supabase Auth, no other Supabase product in use)
+Supabase: YES — Postgres storage for the public chart gallery, plus Supabase Storage for static embed-image snapshots, plus a small write-only client-error log for basic error monitoring (no Supabase Auth, no other Supabase product in use)
 Supabase Auth: NO — identity for signed-in users still comes from Clerk; Supabase's Third-Party Auth feature lets Postgres verify Clerk's session tokens without using Supabase's own auth system
 Umami: NO
 Stripe: NO
@@ -20,6 +20,7 @@ Public user content: YES — exported charts (data, styling, optional embedded i
 Marketing email: NO
 Targeted at minors: NO
 Browser-persisted chart data: YES — a per-item secret is kept in the creator's browser so only they can delete that item from the public gallery later
+Client error logs: YES — unhandled errors send their message, stack trace, page path, and browser user-agent string to a write-only Supabase table (no external monitoring service); this is intentionally the same, already-approved Supabase infrastructure rather than a new "External API," and carries no chart content or other user data
 
 ## Commerce
 

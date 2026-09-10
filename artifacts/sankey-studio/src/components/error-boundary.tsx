@@ -4,6 +4,7 @@ import {
   type ErrorInfo,
   type ReactNode,
 } from 'react';
+import { reportClientError } from '@/lib/errors';
 
 export interface ErrorFallbackProps {
   error: Error;
@@ -80,6 +81,7 @@ export class ErrorBoundary extends Component<
       toError(error),
       info.componentStack,
     );
+    reportClientError(toError(error), 'error-boundary');
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps): void {
