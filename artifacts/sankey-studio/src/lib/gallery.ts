@@ -217,7 +217,7 @@ export async function fetchMyGalleryItems(): Promise<GalleryItem[]> {
   return (data as GalleryRow[]).map(fromRow);
 }
 
-export type SaveGalleryResult = { ok: true; item: GalleryItem } | { ok: false; reason: "too_large" | "network" };
+export type SaveGalleryResult = { ok: true; item: GalleryItem } | { ok: false; reason: "too_large" | "duplicate" | "network" };
 
 export async function createGalleryItem(item: Omit<GalleryItem, "createdAt" | "upvotes" | "downvotes">): Promise<SaveGalleryResult> {
   const ownerSecret = crypto.randomUUID();
@@ -249,7 +249,8 @@ export async function createGalleryItem(item: Omit<GalleryItem, "createdAt" | "u
   });
   if (error || !data || !Array.isArray(data) || data.length === 0) {
     const tooLarge = Boolean(error?.message?.includes("too large"));
-    return { ok: false, reason: tooLarge ? "too_large" : "network" };
+    const duplicate = Boolean(error?.message?.includes("duplicate_content"));
+    return { ok: false, reason: tooLarge ? "too_large" : duplicate ? "duplicate" : "network" };
   }
   rememberOwnedChart(item.chartId, ownerSecret);
   // A private chart's SVG is never uploaded to the (public) CDN bucket --

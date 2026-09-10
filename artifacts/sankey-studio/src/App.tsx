@@ -187,6 +187,8 @@ function Studio({ authEnabled }: { authEnabled: boolean }) {
       setIsPrivateExport(false);
     } else if (result.reason === "too_large") {
       setGalleryNotice("The export completed, but this chart's images were too large to share (max 2MB).");
+    } else if (result.reason === "duplicate") {
+      setGalleryNotice("The export completed, but this exact chart is already in the shared gallery, so it wasn't added again.");
     } else {
       setGalleryNotice("The export completed, but it could not be added to the shared gallery. Check your connection and try again.");
     }
