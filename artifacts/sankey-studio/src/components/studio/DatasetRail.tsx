@@ -59,13 +59,13 @@ function GalleryItemRow({ item, active, onSelect, onDelete, canDelete, onVote, m
       <GalleryThumbnail item={item} />
       <div className="min-w-0 flex-1">
         <button onClick={() => onSelect(item)} className="block w-full text-left" title="Use this chart as a starting point" data-testid={`button-gallery-${item.chartId}`}>
-          {sampleFlowPath(item) && <span className="block truncate font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.5)]" data-testid={`text-flow-${item.chartId}`}>{sampleFlowPath(item)}</span>}
+          {sampleFlowPath(item) && <span className="block truncate font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.65)]" data-testid={`text-flow-${item.chartId}`}>{sampleFlowPath(item)}</span>}
           <span className="flex items-center gap-1 truncate text-[12px] font-medium text-[hsl(var(--sidebar-foreground)/.8)]">{item.isPrivate && <Lock size={9} className="shrink-0 text-[hsl(var(--sidebar-foreground)/.5)]" />}{item.title || "Untitled story"}</span>
-          <span className="mt-0.5 block truncate text-[9px] text-[hsl(var(--sidebar-foreground)/.42)]">Use as a starting point · {relativeTime(item.createdAt)}</span>
+          <span className="mt-0.5 block truncate text-[9px] text-[hsl(var(--sidebar-foreground)/.65)]">Use as a starting point · {relativeTime(item.createdAt)}</span>
         </button>
         <div className="mt-1 flex items-center gap-1">
           <button onClick={(event) => { event.stopPropagation(); onVote(item.chartId, 1); }} aria-label="Upvote this chart" aria-pressed={myVote === 1} className={`grid size-5 place-items-center rounded ${myVote === 1 ? "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-primary))]" : "text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]"}`} data-testid={`button-upvote-${item.chartId}`}><Plus size={10} /></button>
-          <span className="min-w-[14px] text-center font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.55)]" data-testid={`text-score-${item.chartId}`}>{score > 0 ? `+${score}` : score}</span>
+          <span className="min-w-[14px] text-center font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.65)]" data-testid={`text-score-${item.chartId}`}>{score > 0 ? `+${score}` : score}</span>
           <button onClick={(event) => { event.stopPropagation(); onVote(item.chartId, -1); }} aria-label="Downvote this chart" aria-pressed={myVote === -1} className={`grid size-5 place-items-center rounded ${myVote === -1 ? "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-foreground))]" : "text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]"}`} data-testid={`button-downvote-${item.chartId}`}><Minus size={10} /></button>
           {!item.isPrivate && <a href={galleryItemPermalink(item.chartId)} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} aria-label="Open a shareable link to this chart" title="Open a shareable link to this chart" className="ml-1 grid size-5 place-items-center rounded text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]" data-testid={`link-permalink-${item.chartId}`}><Link2 size={10} /></a>}
           {onReport && !reported && <button onClick={(event) => { event.stopPropagation(); onReport(item); }} aria-label="Report this chart" title="Report this chart" className="grid size-5 place-items-center rounded text-[hsl(var(--sidebar-foreground)/.4)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-foreground))]" data-testid={`button-report-${item.chartId}`}><Flag size={10} /></button>}
@@ -99,7 +99,7 @@ export function DatasetRail({ onImport, onPaste, collapsed, onToggle, gallery, g
   if (collapsed) {
     return (
       <aside className="flex w-full shrink-0 items-center justify-between border-b border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar))] px-3 py-2 text-[hsl(var(--sidebar-foreground))] lg:w-[52px] lg:flex-col lg:justify-start lg:px-2 lg:py-4" aria-label="Collapsed gallery menu">
-        <span className="hidden font-mono text-[9px] uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.5)] lg:block [writing-mode:vertical-rl]">Gallery</span>
+        <span className="hidden font-mono text-[9px] uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.65)] lg:block [writing-mode:vertical-rl]">Gallery</span>
         <button onClick={onToggle} className="grid size-8 place-items-center rounded-md bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-foreground)/.75)] transition hover:text-[hsl(var(--sidebar-foreground))]" aria-label="Expand gallery menu" data-testid="button-expand-datasets"><ChevronRight size={15} /></button>
       </aside>
     );
@@ -113,13 +113,13 @@ export function DatasetRail({ onImport, onPaste, collapsed, onToggle, gallery, g
             <ChevronLeft size={14} />
           </button>
         </div>
-        {galleryLoading ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.42)]">Loading the shared gallery…</p> : gallery.length === 0 ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.42)]">Export a chart to add it here for everyone to see and reuse.</p> : <div className="space-y-1.5">
+        {galleryLoading ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.65)]">Loading the shared gallery…</p> : gallery.length === 0 ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.65)]">Export a chart to add it here for everyone to see and reuse.</p> : <div className="space-y-1.5">
           {gallery.map((item) => <GalleryItemRow key={item.chartId} item={item} active={activeGalleryId === item.chartId} onSelect={onSelectGallery} onDelete={onDeleteGallery} canDelete={canDeleteGallery(item.chartId)} onVote={onVoteGallery} myVote={myGalleryVote(item.chartId)} onReport={canDeleteGallery(item.chartId) ? undefined : setReportingItem} />)}
         </div>}
       </div>
       {signedIn && <div className="border-t border-[hsl(var(--sidebar-border))] px-3 py-4">
         <div className="mb-2 flex items-center gap-2 px-2 text-[10px] font-medium uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.56)]"><UserRound size={12} /> My charts <span className="font-mono text-[9px]">({myCharts.length})</span></div>
-        {myChartsLoading ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.42)]">Loading your charts…</p> : myCharts.length === 0 ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.42)]">Charts you export while signed in appear here, including private ones.</p> : <div className="space-y-1.5">
+        {myChartsLoading ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.65)]">Loading your charts…</p> : myCharts.length === 0 ? <p className="px-2 text-[10px] leading-relaxed text-[hsl(var(--sidebar-foreground)/.65)]">Charts you export while signed in appear here, including private ones.</p> : <div className="space-y-1.5">
           {myCharts.map((item) => <GalleryItemRow key={item.chartId} item={item} active={activeGalleryId === item.chartId} onSelect={onSelectGallery} onDelete={onDeleteGallery} canDelete onVote={onVoteGallery} myVote={myGalleryVote(item.chartId)} />)}
         </div>}
       </div>}
