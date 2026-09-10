@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="220" height="48" viewBox="0 0 220 48" role="img" aria-labelledby="title">
   <title id="title">Sankey Studio</title>
-  <rect x="2" y="4" width="40" height="40" rx="11" fill="#c85d46"/>
+  <rect x="2" y="4" width="40" height="40" rx="11" fill="#46aa6a"/>
   <path d="M13 14v20M13 24h9M22 24V15M22 24l9 10M22 24l9-10" fill="none" stroke="#243033" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="54" y="31" fill="#243033" font-family="Arial, sans-serif" font-size="21" font-weight="700">Sankey</text>
   <text x="137" y="31" fill="#243033" font-family="Georgia, serif" font-size="23" font-style="italic">Studio</text>
